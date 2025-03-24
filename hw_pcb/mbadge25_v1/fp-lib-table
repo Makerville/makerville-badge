@@ -1,4 +1,0 @@
-(fp_lib_table
-  (version 7)
-  (lib (name "Library_FP_mbadge25")(type "KiCad")(uri "${KIPRJMOD}/Library_FP_mbadge25.pretty")(options "")(descr ""))
-)
