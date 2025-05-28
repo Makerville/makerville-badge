@@ -16,9 +16,9 @@ export default function BleScanner() {
         <div className="px-4 py-4">
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
             <Bluetooth className="text-primary text-2xl" />
-            BLE Device Scanner
+            Makerville Badge
           </h1>
-          <p className="text-sm text-slate-500 mt-1">Discover and connect to Bluetooth devices</p>
+          <p className="text-sm text-slate-500 mt-1">Discover and tweak badges near you over BLE</p>
         </div>
       </header>
 
