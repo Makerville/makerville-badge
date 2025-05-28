@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 11% 98%; /* #F5F7FA */
+  --foreground: 217 19% 27%; /* #3B4552 */
+  --muted: 214 13% 93%; /* #E8EBF0 */
+  --muted-foreground: 215 14% 34%; /* #4A5568 */
+  --popover: 0 0% 100%; /* #FFFFFF */
+  --popover-foreground: 217 19% 27%; /* #3B4552 */
+  --card: 0 0% 100%; /* #FFFFFF */
+  --card-foreground: 217 19% 27%; /* #3B4552 */
+  --border: 214 20% 89%; /* #DDD6FE */
+  --input: 214 20% 89%; /* #DDD6FE */
+  --primary: 217 91% 60%; /* #2563EB */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 215 20% 65%; /* #64748B */
+  --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+  --accent: 214 13% 93%; /* #E8EBF0 */
+  --accent-foreground: 217 19% 27%; /* #3B4552 */
+  --destructive: 0 84% 60%; /* #EF4444 */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --success: 142 71% 45%; /* #10B981 */
+  --warning: 38 92% 50%; /* #F59E0B */
+  --ring: 217 91% 60%; /* #2563EB */
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 224 71% 4%; /* #0F172A */
+  --foreground: 213 31% 91%; /* #E2E8F0 */
+  --muted: 223 47% 11%; /* #1E293B */
+  --muted-foreground: 215 20% 65%; /* #64748B */
+  --popover: 224 71% 4%; /* #0F172A */
+  --popover-foreground: 213 31% 91%; /* #E2E8F0 */
+  --card: 224 71% 4%; /* #0F172A */
+  --card-foreground: 213 31% 91%; /* #E2E8F0 */
+  --border: 216 34% 17%; /* #334155 */
+  --input: 216 34% 17%; /* #334155 */
+  --primary: 217 91% 60%; /* #2563EB */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 215 20% 65%; /* #64748B */
+  --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+  --accent: 216 34% 17%; /* #334155 */
+  --accent-foreground: 213 31% 91%; /* #E2E8F0 */
+  --destructive: 0 84% 60%; /* #EF4444 */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --success: 142 71% 45%; /* #10B981 */
+  --warning: 38 92% 50%; /* #F59E0B */
+  --ring: 217 91% 60%; /* #2563EB */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Custom animations for scanning indicator */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
