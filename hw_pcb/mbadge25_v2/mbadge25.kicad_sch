@@ -7467,6 +7467,24 @@
 			"Ojpkf39/3Q0NDRcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 			"AAArKytKhYWF5xYWFiYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 			"AAAAAAAAAAAAkQEAAAAAAAAgOwCInn0AACA7AIiefQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+			"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 			"AAAAAAAAAAAAAAAAAAAAAAAAAA=="
 		)
 	)
@@ -8333,6 +8351,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "TC-6601-5.0-160"
+			(at 38.1 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b6e28214-ef18-48bf-ac72-4196a48942dc")
 		)
@@ -8365,7 +8392,7 @@
 				)
 			)
 		)
-		(property "Value" "XC6220B331MR"
+		(property "Value" "AP7366-33W5-7"
 			(at 147.32 23.114 0)
 			(effects
 				(font
@@ -8392,6 +8419,15 @@
 			)
 		)
 		(property "Description" "1A, Low Drop-out Voltage Regulator, Fixed Output 3.3V, SOT-23-5"
+			(at 144.78 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" ""
 			(at 144.78 29.21 0)
 			(effects
 				(font
@@ -8563,6 +8599,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "CC1206KRX7R9BB104"
+			(at 151.13 175.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "f0956560-12d6-4567-84d2-f3ef727f29c7")
 		)
@@ -8651,6 +8696,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "CC1206KKX7R0BB225"
+			(at 124.46 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d4913de1-c818-4444-a787-b76945b3d1c8")
 		)
@@ -8736,6 +8790,15 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "CC1206JKNPOCBN470"
+			(at 91.44 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -8891,6 +8954,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RC1206FR-07100KL"
+			(at 111.76 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "a8b56f8e-f122-4620-8705-a30a4626750e")
 		)
@@ -8972,6 +9044,15 @@
 			)
 		)
 		(property "Field5" "${VALUE}"
+			(at 156.21 175.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "TC-6601-5.0-160"
 			(at 156.21 175.26 0)
 			(effects
 				(font
@@ -9134,6 +9215,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "CC1206KKX7R0BB225"
+			(at 130.81 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d86f1b6c-9c7f-4858-b7d6-3e57fdb62d4c")
 		)
@@ -9284,6 +9374,15 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "CC1206KRX7R9BB104"
+			(at 104.14 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -9451,7 +9550,7 @@
 				)
 			)
 		)
-		(property "Value" "MSK4005"
+		(property "Value" "B0520LW-7-F"
 			(at 118.618 35.56 90)
 			(effects
 				(font
@@ -9459,7 +9558,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Library_FP_mbadge25:D_SOD-523"
+		(property "Footprint" "Library_FP_mbadge25:D_SOD-123"
 			(at 118.11 39.37 0)
 			(effects
 				(font
@@ -9493,6 +9592,15 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "B0520LW-7-F"
+			(at 118.11 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -9580,6 +9688,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "RC1206FR-0710KL"
+			(at 137.16 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -9744,6 +9861,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "CC1206KKX7R0BB105"
+			(at 43.18 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "67a069fe-1458-4646-bd8c-6b9b14189f52")
 		)
@@ -9777,7 +9903,7 @@
 				)
 			)
 		)
-		(property "Value" "LP0404N3T5G"
+		(property "Value" "SI2303CDS-T1-GE3"
 			(at 115.57 24.13 90)
 			(effects
 				(font
@@ -9804,6 +9930,15 @@
 			)
 		)
 		(property "Description" "insulated-gate field-effect transistor (IGFET): P-channel enhancement-type with inverse (body-drain) diode"
+			(at 109.22 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "SI2303CDS-T1-GE3"
 			(at 109.22 31.75 0)
 			(effects
 				(font
@@ -9876,6 +10011,15 @@
 			)
 		)
 		(property "Description" "capacitor, non-polarized/bipolar"
+			(at 86.36 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "CC1206JKNPOCBN470"
 			(at 86.36 68.58 0)
 			(effects
 				(font
@@ -10185,6 +10329,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RC1206FR-075K1L"
+			(at 73.66 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "462dcc22-08f7-4bd6-ac04-5d4ddc933c3e")
 		)
@@ -10478,6 +10631,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RE1206FRE07220RL"
+			(at 194.31 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "789cf8a2-3017-405c-95f6-439ad526c283")
 		)
@@ -10628,6 +10790,15 @@
 					(size 1.27 1.27)
 				)
 				(justify right)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "CC1206KKX7R0BB105"
+			(at 115.57 113.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -11026,6 +11197,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RC1206FR-075K1L"
+			(at 73.66 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "0b129f30-da5d-43a0-99d9-d9b05503011e")
 		)
@@ -11111,6 +11291,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "CC1206KKX7R0BB225"
+			(at 158.75 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -11201,6 +11390,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RC1206FR-0710KL"
+			(at 156.21 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "63492dc3-9e89-4022-b0ff-5526cf4a8337")
 		)
@@ -11285,6 +11483,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "RC1206FR-0710KL"
+			(at 143.51 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -11700,6 +11907,14 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "USB4105-GF-A"
+			(at 44.45 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(pin "A8"
 			(uuid "678c8656-e699-4499-be99-dcb526714146")
 		)
@@ -11828,6 +12043,15 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer Part Number" "RC1206FR-0727RL"
+			(at 73.66 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "5ea0c0c5-97dd-4143-9d03-97c57588e1a2")
 		)
@@ -11912,6 +12136,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "RC1206FR-0710KL"
+			(at 149.86 119.38 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)
@@ -12063,6 +12296,15 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer Part Number" "RC1206FR-0727RL"
+			(at 73.66 57.15 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 				(hide yes)
 			)
 		)

@@ -3,6 +3,8 @@
 - `cd badge-workspace`
 - `west init -m git@github.com:makerville/makerville-badge.git --mr master`
 - `west update`
+- `west packages pip --install`
+- `west sdk install -t riscv64-zephyr-elf`
 - `west blobs fetch hal_espressif`
 - `cd makerville-badge`
 - `make`
