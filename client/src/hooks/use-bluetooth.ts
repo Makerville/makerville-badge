@@ -1,37 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { BluetoothDeviceInfo, BluetoothError, ScanStatus, ConnectionStatus, BluetoothServiceInfo } from '@/types/bluetooth';
+import { BluetoothDeviceInfo, BluetoothError, ScanStatus, ConnectionStatus } from '@/types/bluetooth';
 import { useToast } from '@/hooks/use-toast';
 
-// Standard Bluetooth service UUIDs with friendly names
-const STANDARD_SERVICES: Record<string, { name: string; description: string }> = {
-  '00001800-0000-1000-8000-00805f9b34fb': {
-    name: 'Generic Access',
-    description: 'Standard device information service'
-  },
-  '00001801-0000-1000-8000-00805f9b34fb': {
-    name: 'Generic Attribute',
-    description: 'GATT service configuration'
-  },
-  '0000180f-0000-1000-8000-00805f9b34fb': {
-    name: 'Battery Service',
-    description: 'Battery level monitoring'
-  },
-  '0000180a-0000-1000-8000-00805f9b34fb': {
-    name: 'Device Information',
-    description: 'Manufacturer and device info'
-  },
-  '0000180d-0000-1000-8000-00805f9b34fb': {
-    name: 'Heart Rate',
-    description: 'Heart rate measurement service'
-  },
-  '00001812-0000-1000-8000-00805f9b34fb': {
-    name: 'Human Interface Device',
-    description: 'HID over GATT service'
-  }
-};
+// Create a single source of truth for the Bluetooth state
+let globalSelectedDevice: BluetoothDeviceInfo | null = null;
+let globalSetSelectedDevice: ((device: BluetoothDeviceInfo | null) => void) | null = null;
 
 export function useBluetooth() {
-  const [discoveredDevices, setDiscoveredDevices] = useState<BluetoothDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<BluetoothDeviceInfo | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatus>({
     isScanning: false,
@@ -43,6 +18,12 @@ export function useBluetooth() {
   });
   const [error, setError] = useState<BluetoothError | null>(null);
   const { toast } = useToast();
+
+  // Set up the global state
+  useEffect(() => {
+    globalSelectedDevice = selectedDevice;
+    globalSetSelectedDevice = setSelectedDevice;
+  }, [selectedDevice]);
 
   // Check if Web Bluetooth is available
   const checkBluetoothAvailability = useCallback(async () => {
@@ -59,7 +40,7 @@ export function useBluetooth() {
     try {
       const available = await navigator.bluetooth.getAvailability();
       setScanStatus(prev => ({ ...prev, isAvailable: available }));
-      
+
       if (!available) {
         const bluetoothError: BluetoothError = {
           type: 'not_available',
@@ -68,7 +49,7 @@ export function useBluetooth() {
         };
         setError(bluetoothError);
       }
-      
+
       return available;
     } catch (err) {
       const bluetoothError: BluetoothError = {
@@ -81,159 +62,74 @@ export function useBluetooth() {
     }
   }, []);
 
-  // Start scanning for devices
-  const startScan = useCallback(async () => {
-    setError(null);
-    
-    const isAvailable = await checkBluetoothAvailability();
-    if (!isAvailable) return;
-
-    setScanStatus(prev => ({ ...prev, isScanning: true }));
-
-    try {
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: [
-          'generic_access',
-          'generic_attribute', 
-          'battery_service',
-          'device_information',
-          'heart_rate',
-          'human_interface_device'
-        ]
-      });
-
-      // Check if device already exists
-      const existingDeviceIndex = discoveredDevices.findIndex(d => d.id === device.id);
-      
-      const deviceInfo: BluetoothDeviceInfo = {
-        id: device.id,
-        name: device.name || 'Unknown Device',
-        device: device,
-        connected: device.gatt?.connected || false,
-        lastSeen: new Date(),
-        rssi: Math.floor(Math.random() * 40) - 80 // Mock RSSI as it's not available in Web Bluetooth API
-      };
-
-      // Add event listeners for device connection changes
-      device.addEventListener('gattserverdisconnected', () => {
-        setDiscoveredDevices(prev => 
-          prev.map(d => 
-            d.id === device.id 
-              ? { ...d, connected: false, server: undefined, services: undefined }
-              : d
-          )
-        );
-        
-        setConnectionStatus(prev => ({
-          ...prev,
-          connectedDevices: prev.connectedDevices.filter(d => d.id !== device.id)
-        }));
-
-        toast({
-          title: "Device Disconnected",
-          description: `${deviceInfo.name} has been disconnected`,
-          variant: "default"
-        });
-      });
-
-      if (existingDeviceIndex >= 0) {
-        // Update existing device
-        setDiscoveredDevices(prev => 
-          prev.map((d, index) => 
-            index === existingDeviceIndex 
-              ? { ...d, lastSeen: new Date(), rssi: deviceInfo.rssi }
-              : d
-          )
-        );
-      } else {
-        // Add new device
-        setDiscoveredDevices(prev => [...prev, deviceInfo]);
-      }
-
-      setScanStatus(prev => ({ 
-        ...prev, 
-        isScanning: false, 
-        lastScanTime: new Date() 
-      }));
-
-      toast({
-        title: "Device Found",
-        description: `Discovered ${deviceInfo.name}`,
-        variant: "default"
-      });
-
-    } catch (err) {
-      setScanStatus(prev => ({ ...prev, isScanning: false }));
-      
-      // Don't show error for user cancellation
-      if (err instanceof Error && err.name === 'NotFoundError') {
-        return;
-      }
-
-      const bluetoothError: BluetoothError = {
-        type: 'scan_failed',
-        message: 'Failed to scan for devices',
-        details: err instanceof Error ? err.message : 'Unknown error occurred during scanning'
-      };
-      setError(bluetoothError);
-      
-      toast({
-        title: "Scan Failed",
-        description: bluetoothError.message,
-        variant: "destructive"
-      });
-    }
-  }, [discoveredDevices, checkBluetoothAvailability, toast]);
-
   // Connect to a device
   const connectToDevice = useCallback(async (deviceInfo: BluetoothDeviceInfo) => {
     setError(null);
-    
-    // Mark device as connecting
-    setDiscoveredDevices(prev => 
-      prev.map(d => 
-        d.id === deviceInfo.id 
-          ? { ...d, connecting: true }
-          : d
-      )
-    );
-
+    console.log('Connecting to device:', deviceInfo.name);
     setConnectionStatus(prev => ({ ...prev, isConnecting: true }));
 
     try {
-      const server = await deviceInfo.device.gatt?.connect();
-      
+      // First try to connect to the existing device
+      let server = deviceInfo.device.gatt;
+
+      console.log('Current GATT server state:', server?.connected ? 'connected' : 'disconnected');
+
+      // If not connected, try to connect
+      if (!server?.connected) {
+        console.log('Attempting to connect to GATT server...');
+        server = await deviceInfo.device.gatt?.connect();
+      }
+
       if (!server) {
         throw new Error('Failed to connect to GATT server');
       }
 
-      // Fetch available services
-      const services = await server.getPrimaryServices();
-      
+      console.log('Connected to GATT server, fetching services...');
+
+      // Get the specific badge service
+      const service = await server.getPrimaryService('00001234-0000-1000-8000-00805f9b34fb');
+      console.log('Found badge service');
+
+      // Get the specific characteristic
+      const characteristic = await service.getCharacteristic('00005678-0000-1000-8000-00805f9b34fb');
+      console.log('Found badge characteristic');
+
+      // Create updated device info with all connection details
       const updatedDeviceInfo: BluetoothDeviceInfo = {
         ...deviceInfo,
         server,
-        services,
+        services: [service],
+        characteristic,
         connected: true,
         connecting: false,
         lastSeen: new Date()
       };
 
-      // Update device list
-      setDiscoveredDevices(prev => 
-        prev.map(d => 
-          d.id === deviceInfo.id 
-            ? updatedDeviceInfo
-            : d
-        )
-      );
+      console.log('Setting device as connected:', {
+        name: updatedDeviceInfo.name,
+        connected: updatedDeviceInfo.connected,
+        hasServer: !!updatedDeviceInfo.server,
+        hasService: !!updatedDeviceInfo.services?.length,
+        hasCharacteristic: !!updatedDeviceInfo.characteristic
+      });
 
-      // Update connection status
+      // Update both selected device and connection status
+      setSelectedDevice(updatedDeviceInfo);
       setConnectionStatus(prev => ({
         isConnecting: false,
-        connectedDevices: [...prev.connectedDevices.filter(d => d.id !== deviceInfo.id), updatedDeviceInfo]
+        connectedDevices: [updatedDeviceInfo]
       }));
+
+      // Update global state
+      globalSelectedDevice = updatedDeviceInfo;
+      if (globalSetSelectedDevice) {
+        globalSetSelectedDevice(updatedDeviceInfo);
+      }
+
+      console.log('Device state after update:', {
+        selectedDevice: updatedDeviceInfo.connected,
+        connectionStatus: 1
+      });
 
       toast({
         title: "Connected Successfully",
@@ -242,16 +138,13 @@ export function useBluetooth() {
       });
 
     } catch (err) {
-      // Remove connecting state
-      setDiscoveredDevices(prev => 
-        prev.map(d => 
-          d.id === deviceInfo.id 
-            ? { ...d, connecting: false }
-            : d
-        )
-      );
-
+      console.error('Connection error:', err);
       setConnectionStatus(prev => ({ ...prev, isConnecting: false }));
+      setSelectedDevice(null);
+      globalSelectedDevice = null;
+      if (globalSetSelectedDevice) {
+        globalSetSelectedDevice(null);
+      }
 
       const bluetoothError: BluetoothError = {
         type: 'connection_failed',
@@ -262,11 +155,128 @@ export function useBluetooth() {
 
       toast({
         title: "Connection Failed",
-        description: bluetoothError.message,
+        description: "Please make sure the device is in range and try again",
         variant: "destructive"
       });
     }
   }, [toast]);
+
+  // Start scanning for devices
+  const startScan = useCallback(async () => {
+    setError(null);
+    setSelectedDevice(null);
+    globalSelectedDevice = null;
+    if (globalSetSelectedDevice) {
+      globalSetSelectedDevice(null);
+    }
+
+    // First check if Bluetooth is available
+    const isAvailable = await checkBluetoothAvailability();
+    if (!isAvailable) {
+      toast({
+        title: "Bluetooth Not Available",
+        description: "Please make sure Bluetooth is enabled on your device",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setScanStatus(prev => ({ ...prev, isScanning: true }));
+
+    try {
+      console.log('Requesting device...');
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          '00001234-0000-1000-8000-00805f9b34fb'  // Badge service
+        ]
+      });
+
+      console.log('Device selected:', device.name, device.id);
+
+      const deviceInfo: BluetoothDeviceInfo = {
+        id: device.id,
+        name: device.name || 'Unknown Device',
+        device: device,
+        connected: false,
+        lastSeen: new Date(),
+        rssi: Math.floor(Math.random() * 40) - 80
+      };
+
+      // Set as selected device immediately
+      setSelectedDevice(deviceInfo);
+      globalSelectedDevice = deviceInfo;
+      if (globalSetSelectedDevice) {
+        globalSetSelectedDevice(deviceInfo);
+      }
+
+      // Add event listeners for device connection changes
+      device.addEventListener('gattserverdisconnected', () => {
+        console.log('Device disconnected:', device.name);
+        setSelectedDevice(null);
+        globalSelectedDevice = null;
+        if (globalSetSelectedDevice) {
+          globalSetSelectedDevice(null);
+        }
+        setConnectionStatus(prev => ({
+          ...prev,
+          connectedDevices: []
+        }));
+
+        toast({
+          title: "Device Disconnected",
+          description: `${deviceInfo.name} has been disconnected`,
+          variant: "default"
+        });
+      });
+
+      setScanStatus(prev => ({
+        ...prev,
+        isScanning: false,
+        lastScanTime: new Date()
+      }));
+
+      toast({
+        title: "Device Found",
+        description: `Discovered ${deviceInfo.name}`,
+        variant: "default"
+      });
+
+      // Automatically try to connect to the device
+      await connectToDevice(deviceInfo);
+
+    } catch (err) {
+      console.error('Scan error:', err);
+      setScanStatus(prev => ({ ...prev, isScanning: false }));
+      setSelectedDevice(null);
+      globalSelectedDevice = null;
+      if (globalSetSelectedDevice) {
+        globalSetSelectedDevice(null);
+      }
+
+      // Don't show error for user cancellation
+      if (err instanceof Error && err.name === 'NotFoundError') {
+        return;
+      }
+
+      // Show a more user-friendly error message
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred during scanning';
+      console.error('Detailed scan error:', errorMessage);
+
+      const bluetoothError: BluetoothError = {
+        type: 'scan_failed',
+        message: 'Failed to scan for devices',
+        details: errorMessage
+      };
+      setError(bluetoothError);
+
+      toast({
+        title: "Scan Failed",
+        description: "Please make sure Bluetooth is enabled and try again",
+        variant: "destructive"
+      });
+    }
+  }, [checkBluetoothAvailability, toast, connectToDevice]);
 
   // Disconnect from a device
   const disconnectFromDevice = useCallback(async (deviceInfo: BluetoothDeviceInfo) => {
@@ -275,24 +285,15 @@ export function useBluetooth() {
         deviceInfo.server.disconnect();
       }
 
-      // Update device list
-      setDiscoveredDevices(prev => 
-        prev.map(d => 
-          d.id === deviceInfo.id 
-            ? { ...d, connected: false, server: undefined, services: undefined }
-            : d
-        )
-      );
-
-      // Update connection status
+      setSelectedDevice(null);
+      globalSelectedDevice = null;
+      if (globalSetSelectedDevice) {
+        globalSetSelectedDevice(null);
+      }
       setConnectionStatus(prev => ({
         ...prev,
-        connectedDevices: prev.connectedDevices.filter(d => d.id !== deviceInfo.id)
+        connectedDevices: []
       }));
-
-      if (selectedDevice?.id === deviceInfo.id) {
-        setSelectedDevice(null);
-      }
 
       toast({
         title: "Disconnected",
@@ -307,67 +308,41 @@ export function useBluetooth() {
         variant: "destructive"
       });
     }
-  }, [selectedDevice, toast]);
+  }, [toast]);
 
-  // Get service information with friendly names
-  const getServiceInfo = useCallback((services: BluetoothRemoteGATTService[]): BluetoothServiceInfo[] => {
-    return services.map(service => {
-      const standardService = STANDARD_SERVICES[service.uuid];
-      return {
-        name: standardService?.name || 'Custom Service',
-        uuid: service.uuid,
-        description: standardService?.description || 'Custom or proprietary service',
-        service
-      };
-    });
-  }, []);
-
-  // Refresh device services
-  const refreshDeviceServices = useCallback(async (deviceInfo: BluetoothDeviceInfo) => {
-    if (!deviceInfo.server?.connected) {
+  // Write to badge characteristic
+  const writeToBadge = useCallback(async (deviceInfo: BluetoothDeviceInfo, text: string) => {
+    if (!deviceInfo.characteristic) {
       toast({
-        title: "Not Connected",
-        description: "Device must be connected to refresh services",
+        title: "Error",
+        description: "Device not properly connected",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      const services = await deviceInfo.server.getPrimaryServices();
-      
-      const updatedDeviceInfo = {
-        ...deviceInfo,
-        services,
-        lastSeen: new Date()
-      };
+      // Convert text to Uint8Array
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
 
-      setDiscoveredDevices(prev => 
-        prev.map(d => 
-          d.id === deviceInfo.id 
-            ? updatedDeviceInfo
-            : d
-        )
-      );
-
-      if (selectedDevice?.id === deviceInfo.id) {
-        setSelectedDevice(updatedDeviceInfo);
-      }
+      // Write the data
+      await deviceInfo.characteristic.writeValue(data);
 
       toast({
-        title: "Services Refreshed",
-        description: `Updated services for ${deviceInfo.name}`,
+        title: "Success",
+        description: "Text written to badge",
         variant: "default"
       });
-
     } catch (err) {
+      console.error('Write error:', err);
       toast({
-        title: "Refresh Failed",
-        description: `Failed to refresh services for ${deviceInfo.name}`,
+        title: "Write Failed",
+        description: err instanceof Error ? err.message : "Failed to write to badge",
         variant: "destructive"
       });
     }
-  }, [selectedDevice, toast]);
+  }, [toast]);
 
   // Clear error
   const clearError = useCallback(() => {
@@ -380,8 +355,7 @@ export function useBluetooth() {
   }, [checkBluetoothAvailability]);
 
   return {
-    discoveredDevices,
-    selectedDevice,
+    selectedDevice: globalSelectedDevice || selectedDevice,
     setSelectedDevice,
     scanStatus,
     connectionStatus,
@@ -389,8 +363,7 @@ export function useBluetooth() {
     startScan,
     connectToDevice,
     disconnectFromDevice,
-    getServiceInfo,
-    refreshDeviceServices,
+    writeToBadge,
     clearError,
     checkBluetoothAvailability
   };

@@ -1,6 +1,5 @@
 import { Bluetooth } from "lucide-react";
 import { ScanControls } from "@/components/bluetooth/scan-controls";
-import { DeviceList } from "@/components/bluetooth/device-list";
 import { DeviceDetails } from "@/components/bluetooth/device-details";
 import { StatusFooter } from "@/components/bluetooth/status-footer";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
@@ -8,6 +7,12 @@ import { useBluetooth } from "@/hooks/use-bluetooth";
 
 export default function BleScanner() {
   const { scanStatus, connectionStatus, selectedDevice } = useBluetooth();
+
+  console.log('BleScanner render:', {
+    hasDevice: !!selectedDevice,
+    deviceName: selectedDevice?.name,
+    isConnected: selectedDevice?.connected
+  });
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -37,9 +42,6 @@ export default function BleScanner() {
         <div className="space-y-6">
           {/* Scan Controls */}
           <ScanControls />
-
-          {/* Device List */}
-          <DeviceList />
 
           {/* Device Details (shown when device is selected) */}
           {selectedDevice && <DeviceDetails />}

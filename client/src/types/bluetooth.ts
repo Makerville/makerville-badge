@@ -2,12 +2,13 @@ export interface BluetoothDeviceInfo {
   id: string;
   name: string;
   device: BluetoothDevice;
+  connected: boolean;
+  connecting?: boolean;
+  lastSeen: Date;
+  rssi: number;
   server?: BluetoothRemoteGATTServer;
   services?: BluetoothRemoteGATTService[];
-  connected: boolean;
-  rssi?: number;
-  lastSeen: Date;
-  connecting?: boolean;
+  characteristic?: BluetoothRemoteGATTCharacteristic;
 }
 
 export interface BluetoothServiceInfo {
@@ -18,9 +19,9 @@ export interface BluetoothServiceInfo {
 }
 
 export interface BluetoothError {
-  type: 'not_supported' | 'not_available' | 'permission_denied' | 'connection_failed' | 'scan_failed';
+  type: 'not_supported' | 'not_available' | 'scan_failed' | 'connection_failed' | 'disconnect_failed';
   message: string;
-  details?: string;
+  details: string;
 }
 
 export interface ScanStatus {
