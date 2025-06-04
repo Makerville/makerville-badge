@@ -344,6 +344,43 @@ export function useBluetooth() {
     }
   }, [toast]);
 
+  // Read from badge characteristic
+  const readFromBadge = useCallback(async (deviceInfo: BluetoothDeviceInfo) => {
+    if (!deviceInfo.characteristic) {
+      toast({
+        title: "Error",
+        description: "Device not properly connected",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    try {
+      // Read the data
+      const data = await deviceInfo.characteristic.readValue();
+
+      // Convert Uint8Array to text
+      const decoder = new TextDecoder();
+      const text = decoder.decode(data);
+
+      toast({
+        title: "Success",
+        description: "Data read from badge",
+        variant: "default"
+      });
+
+      return text;
+    } catch (err) {
+      console.error('Read error:', err);
+      toast({
+        title: "Read Failed",
+        description: err instanceof Error ? err.message : "Failed to read from badge",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [toast]);
+
   // Clear error
   const clearError = useCallback(() => {
     setError(null);
@@ -364,6 +401,7 @@ export function useBluetooth() {
     connectToDevice,
     disconnectFromDevice,
     writeToBadge,
+    readFromBadge,
     clearError,
     checkBluetoothAvailability
   };
