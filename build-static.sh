@@ -8,7 +8,7 @@ rm -f drizzle.config.ts
 rm -f shared/
 
 # Build the frontend app
-npm run build
+npm run build:static
 
 echo "✅ Static build complete!"
 echo ""

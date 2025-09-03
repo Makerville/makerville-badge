@@ -1,0 +1,3 @@
+# Netlify redirects for SPA routing
+# This file needs to be in the build output directory
+/*    /index.html   200

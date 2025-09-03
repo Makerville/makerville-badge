@@ -1,13 +1,17 @@
-import { Zap, ArrowLeft, Download } from "lucide-react";
+import { Zap, ArrowLeft, Download, Usb, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useGitHubReleases } from "@/hooks/use-github-releases";
+import { useEspTool } from "@/hooks/use-esptool";
+import { BrowserCompatibilityAlert } from "@/components/ui/browser-compatibility-alert";
 
 export default function Flash() {
   const { releases, isLoading, error } = useGitHubReleases("makerville", "makerville-badge");
+  const { connectionState, webSerialSupport, connect, disconnect, isConnecting, isConnected } = useEspTool();
   const [selectedRelease, setSelectedRelease] = useState<string>("");
 
   const firmwareBinaries = releases.flatMap(release => 
@@ -50,6 +54,61 @@ export default function Flash() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6 max-w-md">
         <div className="space-y-6">
+          {/* Browser Compatibility Warning */}
+          <BrowserCompatibilityAlert webSerialSupport={webSerialSupport} />
+          
+          {/* Connection Status Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Usb className="w-5 h-5" />
+                Device Connection
+              </CardTitle>
+              <CardDescription>
+                Connect your ESP32-based badge via USB
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {connectionState.status === 'connected' && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-md border border-green-200">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800">Connected to {connectionState.chipType}</p>
+                    <p className="text-xs text-green-600">Ready to flash firmware</p>
+                  </div>
+                  <Badge variant="secondary" className="text-green-700 bg-green-100">
+                    {connectionState.chipType}
+                  </Badge>
+                </div>
+              )}
+
+              {connectionState.status === 'error' && (
+                <div className="p-3 bg-red-50 rounded-md border border-red-200">
+                  <p className="text-sm font-medium text-red-800">Connection Error</p>
+                  <p className="text-xs text-red-600">{connectionState.error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {!isConnected ? (
+                  <Button
+                    onClick={connect}
+                    disabled={isConnecting || !webSerialSupport.supported}
+                    className="flex-1"
+                  >
+                    <Usb className="w-4 h-4 mr-2" />
+                    {isConnecting ? 'Connecting...' : 'Connect Device'}
+                  </Button>
+                ) : (
+                  <Button onClick={disconnect} variant="outline" className="flex-1">
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Flash Tool Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -57,15 +116,10 @@ export default function Flash() {
                 ESP32 Flash Tool
               </CardTitle>
               <CardDescription>
-                Upload firmware binaries directly to your ESP32-based badge
+                Upload firmware binaries directly to your badge
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-slate-600">
-                This tool allows you to flash firmware binaries to your Makerville Badge using esptool-js.
-                Connect your badge via USB and select the appropriate binary file.
-              </p>
-              
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Select Release Version</label>
                 {isLoading ? (
@@ -91,13 +145,19 @@ export default function Flash() {
                 )}
               </div>
 
-              <Button disabled className="w-full">
+              <Button 
+                disabled={!isConnected || !selectedRelease} 
+                className="w-full"
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Flash Firmware
               </Button>
-              <p className="text-xs text-slate-500 text-center">
-                Flashing functionality coming soon...
-              </p>
+              
+              {!isConnected && (
+                <p className="text-xs text-slate-500 text-center">
+                  Connect your device first to enable flashing
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
