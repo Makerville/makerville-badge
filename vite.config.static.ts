@@ -7,7 +7,13 @@ export default defineConfig({
   root: 'client',
   build: {
     outDir: '../dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'client/index.html'),
+        flash: path.resolve(__dirname, 'client/flash.html')
+      }
+    }
   },
   resolve: {
     alias: {

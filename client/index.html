@@ -10,16 +10,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Handle GitHub Pages SPA routing
-      (function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const path = urlParams.get('p');
-        if (path) {
-          window.history.replaceState(null, null, path);
-        }
-      })();
-    </script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
   </body>

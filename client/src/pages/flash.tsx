@@ -1,5 +1,4 @@
 import { Zap, ArrowLeft, Download, Usb, CheckCircle } from "lucide-react";
-import { Link } from "wouter";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,9 +32,9 @@ export default function Flash() {
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
             <Zap className="text-primary text-2xl" />
             Flash Firmware
-            <Link href="/">
+            <a href="/index.html">
               <ArrowLeft className="w-5 h-5 text-slate-500 hover:text-primary transition-colors cursor-pointer" />
-            </Link>
+            </a>
             <a
               href="https://github.com/makerville/makerville-badge"
               target="_blank"

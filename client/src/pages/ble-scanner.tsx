@@ -1,5 +1,4 @@
 import { Bluetooth, Zap } from "lucide-react";
-import { Link } from "wouter";
 import { ScanControls } from "@/components/bluetooth/scan-controls";
 import { DeviceDetails } from "@/components/bluetooth/device-details";
 import { StatusFooter } from "@/components/bluetooth/status-footer";
@@ -23,9 +22,9 @@ export default function BleScanner() {
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
             <Bluetooth className="text-primary text-2xl" />
             Makerville Badge
-            <Link href="/flash">
+            <a href="/flash.html">
               <Zap className="w-5 h-5 text-slate-500 hover:text-primary transition-colors cursor-pointer" />
-            </Link>
+            </a>
             <a
               href="https://github.com/makerville/makerville-badge"
               target="_blank"
