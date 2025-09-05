@@ -251,17 +251,20 @@ export function useEspTool(): EspToolHook {
         binaryString += String.fromCharCode(firmwareData[i]);
       }
 
-      // Flash with compression enabled to handle "Non Compressed writes" error
+      // Zephyr RTOS builds for ESP32C3 typically flash at address 0x0
+      // The 159KB binary suggests it includes bootloader + app
+      console.log('Flashing Zephyr firmware binary at address 0x0, size:', firmwareData.length);
+      
       await espLoaderRef.current.writeFlash({
         fileArray: [{
           data: binaryString,
-          address: 0x10000
+          address: 0x0      // Zephyr builds typically flash at 0x0
         }],
         flashSize: 'keep',
         flashMode: 'keep', 
         flashFreq: 'keep',
-        eraseAll: false,
-        compress: true,  // This should resolve the "Non Compressed writes" error
+        eraseAll: true,    // Erase all flash for complete Zephyr image
+        compress: true,
         reportProgress: (_fileIndex: number, written: number, total: number) => {
           const progress = Math.round((written / total) * 100);
           setFlashState(prev => ({
