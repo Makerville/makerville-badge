@@ -1,3 +1,8 @@
-# SPA fallback for all routes
+# Handle specific SPA routes
 /flash /index.html 200
+
+# Assets should be served as-is (no redirect)
+/assets/* /assets/:splat 200
+
+# Everything else goes to index.html for SPA routing
 /* /index.html 200
