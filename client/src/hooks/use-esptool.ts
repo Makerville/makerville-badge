@@ -210,15 +210,26 @@ export function useEspTool(): EspToolHook {
         throw new Error('makerville-badge.bin file not found in this release');
       }
 
-      // Use proxy route to download firmware binary (to avoid CORS issues)
-      const proxyUrl = downloadUrl.replace('https://github.com/', '/api/proxy/github/');
-      console.log('Downloading from proxy:', proxyUrl);
+      // Download firmware binary through CORS proxy
+      // GitHub blocks direct browser downloads, so we need a proxy
+      console.log('Downloading firmware from:', downloadUrl);
+      
+      // Use a reliable CORS proxy service
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(downloadUrl)}`;
+      console.log('Using CORS proxy:', proxyUrl);
       
       const response = await fetch(proxyUrl);
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to download firmware: ${response.status} ${response.statusText}. ${errorText}`);
+        console.error('Download failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: downloadUrl,
+          headers: Object.fromEntries(response.headers.entries()),
+          responseText: errorText
+        });
+        throw new Error(`Failed to download firmware: ${response.status} ${response.statusText}`);
       }
       
       console.log('Download successful, content-type:', response.headers.get('content-type'));
