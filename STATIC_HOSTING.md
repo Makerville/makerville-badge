@@ -50,7 +50,19 @@ The main `index.html` has a script that processes this parameter and updates the
 
 2. **Deploy the `dist` folder** to your static hosting platform
 
-3. The redirect files in `client/public/` will automatically be copied to the build output
+### Cloudflare Pages
+
+For Cloudflare Pages deployment:
+```bash
+npx wrangler deploy --assets=./dist --compatibility-date 2025-05-30
+```
+
+### Other Platforms
+
+Deploy the contents of the `dist/` folder to:
+- **Netlify**: Drag & drop `dist` folder or connect via Git
+- **Vercel**: `npx vercel --prod` (configure build command: `npm run build:static`)
+- **GitHub Pages**: Upload `dist` contents to `gh-pages` branch
 
 ## Testing Locally
 

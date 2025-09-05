@@ -22,7 +22,7 @@ export default function BleScanner() {
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-3">
             <Bluetooth className="text-primary text-2xl" />
             Makerville Badge
-            <a href="/flash.html">
+            <a href="/flash">
               <Zap className="w-5 h-5 text-slate-500 hover:text-primary transition-colors cursor-pointer" />
             </a>
             <a

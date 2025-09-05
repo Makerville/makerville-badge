@@ -31,13 +31,32 @@ export interface ConnectionState {
   error: string | null;
 }
 
+export interface FlashState {
+  status: 'idle' | 'downloading' | 'flashing' | 'success' | 'error';
+  progress: number;
+  message: string;
+  error: string | null;
+}
+
+export interface LogState {
+  logs: string[];
+  isMonitoring: boolean;
+}
+
 export interface EspToolHook {
   connectionState: ConnectionState;
+  flashState: FlashState;
+  logState: LogState;
   webSerialSupport: WebSerialSupport;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
+  flashFirmware: (downloadUrl: string) => Promise<void>;
+  startMonitoring: () => Promise<void>;
+  stopMonitoring: () => void;
+  clearLogs: () => void;
   isConnecting: boolean;
   isConnected: boolean;
+  isFlashing: boolean;
 }
 
 export function useEspTool(): EspToolHook {
@@ -48,6 +67,18 @@ export function useEspTool(): EspToolHook {
     error: null
   });
 
+  const [flashState, setFlashState] = useState<FlashState>({
+    status: 'idle',
+    progress: 0,
+    message: '',
+    error: null
+  });
+
+  const [logState, setLogState] = useState<LogState>({
+    logs: [],
+    isMonitoring: false
+  });
+
   const espLoaderRef = useRef<ESPLoader | null>(null);
   const transportRef = useRef<Transport | null>(null);
   const webSerialSupport = detectWebSerialSupport();
@@ -55,12 +86,23 @@ export function useEspTool(): EspToolHook {
   const terminal = {
     clean() {
       console.log('[ESP] Terminal cleaned');
+      setLogState(prev => ({ ...prev, logs: [] }));
     },
     writeLine(data: string) {
       console.log('[ESP]', data);
+      const timestamp = new Date().toLocaleTimeString();
+      setLogState(prev => ({
+        ...prev,
+        logs: [...prev.logs, `[${timestamp}] ${data}`]
+      }));
     },
     write(data: string) {
       console.log('[ESP]', data);
+      const timestamp = new Date().toLocaleTimeString();
+      setLogState(prev => ({
+        ...prev,
+        logs: [...prev.logs, `[${timestamp}] ${data}`]
+      }));
     },
   };
 
@@ -145,12 +187,169 @@ export function useEspTool(): EspToolHook {
     }
   }, []);
 
+  const flashFirmware = useCallback(async (downloadUrl: string) => {
+    if (!espLoaderRef.current || connectionState.status !== 'connected') {
+      setFlashState(prev => ({
+        ...prev,
+        status: 'error',
+        error: 'Device not connected'
+      }));
+      return;
+    }
+
+    try {
+      setFlashState({
+        status: 'downloading',
+        progress: 0,
+        message: 'Downloading firmware...',
+        error: null
+      });
+
+      // Check if URL contains makerville-badge.bin
+      if (!downloadUrl.includes('makerville-badge.bin')) {
+        throw new Error('makerville-badge.bin file not found in this release');
+      }
+
+      // Use proxy route to download firmware binary (to avoid CORS issues)
+      const proxyUrl = downloadUrl.replace('https://github.com/', '/api/proxy/github/');
+      console.log('Downloading from proxy:', proxyUrl);
+      
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to download firmware: ${response.status} ${response.statusText}. ${errorText}`);
+      }
+      
+      console.log('Download successful, content-type:', response.headers.get('content-type'));
+
+      const firmwareBuffer = await response.arrayBuffer();
+      const firmwareData = new Uint8Array(firmwareBuffer);
+
+      setFlashState(prev => ({
+        ...prev,
+        status: 'flashing',
+        progress: 0,
+        message: 'Flashing firmware...'
+      }));
+
+      // Try the most basic approach with raw binary conversion
+      // Convert Uint8Array to binary string
+      let binaryString = '';
+      for (let i = 0; i < firmwareData.length; i++) {
+        binaryString += String.fromCharCode(firmwareData[i]);
+      }
+
+      // Flash with compression enabled to handle "Non Compressed writes" error
+      await espLoaderRef.current.writeFlash({
+        fileArray: [{
+          data: binaryString,
+          address: 0x10000
+        }],
+        flashSize: 'keep',
+        flashMode: 'keep', 
+        flashFreq: 'keep',
+        eraseAll: false,
+        compress: true,  // This should resolve the "Non Compressed writes" error
+        reportProgress: (_fileIndex: number, written: number, total: number) => {
+          const progress = Math.round((written / total) * 100);
+          setFlashState(prev => ({
+            ...prev,
+            progress,
+            message: `Flashing firmware... ${progress}%`
+          }));
+        }
+      });
+
+      setFlashState({
+        status: 'success',
+        progress: 100,
+        message: 'Firmware flashed successfully!',
+        error: null
+      });
+
+      // Start monitoring device logs after successful flash
+      setTimeout(() => {
+        startMonitoring();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Flash failed:', error);
+      setFlashState({
+        status: 'error',
+        progress: 0,
+        message: '',
+        error: error instanceof Error ? error.message : 'Flash operation failed'
+      });
+    }
+  }, [connectionState.status]);
+
+  const startMonitoring = useCallback(async () => {
+    if (!transportRef.current || connectionState.status !== 'connected') {
+      return;
+    }
+
+    try {
+      setLogState(prev => ({ ...prev, isMonitoring: true }));
+      
+      // Add initial log message
+      const timestamp = new Date().toLocaleTimeString();
+      setLogState(prev => ({
+        ...prev,
+        logs: [...prev.logs, `[${timestamp}] === Device Monitoring Started ===`]
+      }));
+
+      // Try to reset the device using transport directly
+      try {
+        await transportRef.current.setDTR(false);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await transportRef.current.setRTS(false);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        await transportRef.current.setDTR(true);
+        
+        setLogState(prev => ({
+          ...prev,
+          logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Device reset - watching for boot logs...`]
+        }));
+      } catch (resetError) {
+        console.warn('Could not reset device:', resetError);
+        setLogState(prev => ({
+          ...prev,
+          logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Could not reset device, monitoring output...`]
+        }));
+      }
+      
+    } catch (error) {
+      console.error('Failed to start monitoring:', error);
+      setLogState(prev => ({ 
+        ...prev, 
+        isMonitoring: false,
+        logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Monitoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
+      }));
+    }
+  }, [connectionState.status]);
+
+  const stopMonitoring = useCallback(() => {
+    setLogState(prev => ({ ...prev, isMonitoring: false }));
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogState(prev => ({ ...prev, logs: [] }));
+  }, []);
+
   return {
     connectionState,
+    flashState,
+    logState,
     webSerialSupport,
     connect,
     disconnect,
+    flashFirmware,
+    startMonitoring,
+    stopMonitoring,
+    clearLogs,
     isConnecting: connectionState.status === 'connecting',
     isConnected: connectionState.status === 'connected',
+    isFlashing: flashState.status === 'flashing' || flashState.status === 'downloading',
   };
 }

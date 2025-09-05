@@ -10,8 +10,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'client/index.html'),
-        flash: path.resolve(__dirname, 'client/flash.html')
+        main: path.resolve(__dirname, 'client/index.html')
       }
     }
   },
