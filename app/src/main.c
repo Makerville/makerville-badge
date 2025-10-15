@@ -483,6 +483,3 @@ void main(void)
    k_msleep(10);
  }
 }
-
-
-
