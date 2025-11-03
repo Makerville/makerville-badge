@@ -37,7 +37,7 @@ jobs:
         working-directory: project
         shell: bash
         run: |
-          west build -p always -b esp32c3_devkitm app -- -DBOARD_ROOT=.
+          west build -p always -b esp32c3_devkitm app
 
       - name: List build artifacts
         working-directory: project
