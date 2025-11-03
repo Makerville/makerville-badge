@@ -17,6 +17,7 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/drivers/led_strip.h>
 #include <string.h>
+#include <stdlib.h>
 #define LOG_LEVEL LOG_LEVEL_DGB
 LOG_MODULE_REGISTER(badge_shell);
 
@@ -433,7 +434,7 @@ void badge_idle_entry(void* arg)
   display_text("Makerville Badge!");
 }
 
-void badge_idle_run(void* arg)
+enum smf_state_result badge_idle_run(void* arg)
 {
   struct s_object *obj = (struct s_object *)arg;
 
@@ -454,6 +455,7 @@ void badge_idle_run(void* arg)
       LOG_INF("Unhandled event in idle state %d", obj->event);
       break;
   }
+  return 0;
 }
 
 void badge_idle_exit(void* arg)
@@ -466,7 +468,7 @@ void badge_error_entry(void* arg)
   LOG_INF("Badge error entry");
 }
 
-void badge_error_run(void* arg)
+enum smf_state_result badge_error_run(void* arg)
 {
 
   struct s_object *obj = (struct s_object *)arg;
@@ -481,6 +483,7 @@ void badge_error_run(void* arg)
       LOG_INF("Unhandled event in error state %d", obj->event);
       break;
   }
+  return 0;
 }
 
 void badge_error_exit(void* arg)
