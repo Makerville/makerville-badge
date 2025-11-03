@@ -26,10 +26,12 @@ LOG_MODULE_REGISTER(badge_shell);
 #endif
 
 #define STRIP_NUM_PIXELS DT_PROP(STRIP_NODE, chain_length)
-#define LED_DELAY  K_MSEC(600)
+#define LED_DELAY  K_MSEC(700)
 #define RGB(_r, _g, _b) ((struct led_rgb) { .r = (_r), .g = (_g), .b = (_b)})
 static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
 static struct led_rgb pixels[STRIP_NUM_PIXELS];
+static struct k_work led_blink_work;
+static int led_index = 0;
 static void set_led_color(struct led_rgb color)
 {
   for (int i = 0; i < STRIP_NUM_PIXELS; i++){
@@ -38,32 +40,26 @@ static void set_led_color(struct led_rgb color)
   int rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
   if(rc){
     LOG_ERR("led strip update failed: %d",rc);
-  }else{
-    LOG_INF("LED color set: R=%u G=%u B=%u", color.r, color.g, color.b);
   }
 }
-static int cmd_led(const struct shell *shell, size_t argc, char **argv)
+static struct led_rgb colors[] = {
+    {0x0F, 0x00, 0x00}, // Red
+    {0x00, 0x0F, 0x00}, // green 
+    {0x00, 0x00, 0x0F}  // blue
+};
+void led_blink_work_handler(struct k_work *work)
 {
-  if (argc != 2){
-    shell_print(shell, "Usage: led<r/g/b>");
-    return -EINVAL;
-  }
-  const char *c = argv[1];
-  if(strcmp(c, "r") == 0){
-    set_led_color(RGB(0x0F, 0x00, 0x00));
-  } else if (strcmp(c, "g") == 0){
-    set_led_color(RGB(0x00, 0x0F, 0x00));
-  }else if (strcmp(c, "b") == 0){
-    set_led_color(RGB(0x00, 0x00, 0x0F));
-  }else{
-    shell_error(shell, "Invalid color (r/g/b)");
-    return -EINVAL;
-  }
-  return 0;
+    set_led_color(colors[led_index]); // LED color change
+    led_index++;
+    if (led_index >= ARRAY_SIZE(colors))
+        led_index = 0; 
 }
-SHELL_CMD_REGISTER(led, NULL, "Set LED color (r, g, b)", cmd_led);
-
-
+void led_blink_timer_handler(struct k_timer *timer_id)
+{
+    k_work_submit(&led_blink_work);
+}
+// Timer define
+static K_TIMER_DEFINE(led_blink_timer, led_blink_timer_handler, NULL);
 static const struct smf_state badge_states[];
 
 enum badge_state {
@@ -512,8 +508,10 @@ int main(void)
     LOG_ERR("LED strip not ready");
     return ;
   }
-  LOG_INF("LED strip ready. Use shell command: led r/g/b");
+ // LOG_INF("LED strip ready. Use shell command: led r/g/b");
   set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
+  k_work_init(&led_blink_work, led_blink_work_handler);
+  k_timer_start(&led_blink_timer, LED_DELAY, LED_DELAY);
   smf_set_initial(SMF_CTX(&s_obj), &badge_states[BADGE_STATE_INIT]);
   while(1) {
     rc = k_msgq_get(&event_msgq, &s_obj.event, K_NO_WAIT);
