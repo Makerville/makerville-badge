@@ -508,7 +508,6 @@ int main(void)
     LOG_ERR("LED strip not ready");
     return ;
   }
- // LOG_INF("LED strip ready. Use shell command: led r/g/b");
   set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
   k_work_init(&led_blink_work, led_blink_work_handler);
   k_timer_start(&led_blink_timer, LED_DELAY, LED_DELAY);
