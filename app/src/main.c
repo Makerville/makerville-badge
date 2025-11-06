@@ -17,7 +17,6 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/drivers/led_strip.h>
 #include <string.h>
-#include <stdlib.h>
 #define LOG_LEVEL LOG_LEVEL_DGB
 LOG_MODULE_REGISTER(badge_shell);
 
@@ -27,12 +26,11 @@ LOG_MODULE_REGISTER(badge_shell);
 #endif
 
 #define STRIP_NUM_PIXELS DT_PROP(STRIP_NODE, chain_length)
-#define LED_DELAY  K_MSEC(600)
 #define RGB(_r, _g, _b) ((struct led_rgb) { .r = (_r), .g = (_g), .b = (_b)})
 static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
-
 static struct led_rgb pixels[STRIP_NUM_PIXELS];
-
+static struct k_work led_blink_work;
+static int led_index = 0;
 static void set_led_color(struct led_rgb color)
 {
   for (int i = 0; i < STRIP_NUM_PIXELS; i++){
@@ -41,41 +39,102 @@ static void set_led_color(struct led_rgb color)
   int rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
   if(rc){
     LOG_ERR("led strip update failed: %d",rc);
-  }else{
-    LOG_INF("LED color set: R=%u G=%u B=%u", color.r, color.g, color.b);
   }
 }
+static struct led_rgb colors[] = {
+    {0x0F, 0x00, 0x00}, // Red
+    {0x00, 0x0F, 0x00}, // green 
+    {0x00, 0x00, 0x0F}  // blue
+};
 
+void led_blink_work_handler(struct k_work *work)
+{
+    set_led_color(colors[led_index]); // LED color change
+    led_index++;
+    if (led_index >= ARRAY_SIZE(colors))
+        led_index = 0;
+}
+void led_blink_timer_handler(struct k_timer *timer_id)
+{
+    k_work_submit(&led_blink_work);
+}
+// Timer define
+static K_TIMER_DEFINE(led_blink_timer, led_blink_timer_handler, NULL);
+static struct led_rgb blink_color;
+static bool blinking = false;
+
+// cmd_led 
 static int cmd_led(const struct shell *shell, size_t argc, char **argv)
 {
-  if (argc != 4){
-    shell_print(shell, "Usage: led <red> <green> <blue> (each 0-255)");
-    return -EINVAL;
-  }
+    if (argc < 2) {
+        shell_print(shell, "Usage:");
+        shell_print(shell, "  led <r> <g> <b>           set led to a particular color");
+        shell_print(shell, "  led <r> <g> <b> <delay>   Blink color every <delay> ms");
+        shell_print(shell, "  led off                   Turn off LED");
+        return -EINVAL;
+    }
 
-  char *endptr;
-  long r = strtol(argv[1], &endptr, 10);
-  if (*endptr != '\0' || r < 0 || r > 255) {
-    shell_error(shell, "Invalid red value (0-255)");
-    return -EINVAL;
-  }
-  long g = strtol(argv[2], &endptr, 10);
-  if (*endptr != '\0' || g < 0 || g > 255) {
-    shell_error(shell, "Invalid green value (0-255)");
-    return -EINVAL;
-  }
-  long b = strtol(argv[3], &endptr, 10);
-  if (*endptr != '\0' || b < 0 || b > 255) {
-    shell_error(shell, "Invalid blue value (0-255)");
-    return -EINVAL;
-  }
+    // Case 1: "led off"
+    if (strcmp(argv[1], "off") == 0) {
+        k_timer_stop(&led_blink_timer);
+        blinking = false;
+        set_led_color(RGB(0, 0, 0));
+        shell_print(shell, "LED turned off");
+        return 0;
+    }
 
-  set_led_color(RGB((uint8_t)r, (uint8_t)g, (uint8_t)b));
-  return 0;
+    // Must have at least 4 args for RGB
+    if (argc < 4) {
+        shell_error(shell, "Usage: led <r> <g> <b> [delay_ms]");
+        return -EINVAL;
+    }
+
+    char *endptr;
+    long r = strtol(argv[1], &endptr, 10);
+    if (*endptr != '\0' || r < 0 || r > 255) {
+        shell_error(shell, "Invalid red value (0-255)");
+        return -EINVAL;
+    }
+    long g = strtol(argv[2], &endptr, 10);
+    if (*endptr != '\0' || g < 0 || g > 255) {
+        shell_error(shell, "Invalid green value (0-255)");
+        return -EINVAL;
+    }
+    long b = strtol(argv[3], &endptr, 10);
+    if (*endptr != '\0' || b < 0 || b > 255) {
+        shell_error(shell, "Invalid blue value (0-255)");
+        return -EINVAL;
+    }
+
+    struct led_rgb color = RGB((uint8_t)r, (uint8_t)g, (uint8_t)b);
+
+    // Case 2: "led R G B" (static color)
+    if (argc == 4) {
+        k_timer_stop(&led_blink_timer);
+        blinking = false;
+        set_led_color(color);
+        shell_print(shell, "LED set to R=%ld G=%ld B=%ld", r, g, b);
+        return 0;
+    }
+
+    // Case 3: "led R G B delay" (blink)
+    long delay = strtol(argv[4], &endptr, 10);
+    if (*endptr != '\0' || delay <= 0) {
+        shell_error(shell, "Invalid delay (ms)");
+        return -EINVAL;
+    }
+
+    blink_color = color;
+    blinking = true;
+    k_timer_stop(&led_blink_timer);
+    k_timer_start(&led_blink_timer, K_MSEC(delay), K_MSEC(delay));
+
+    shell_print(shell, "LED blinking R=%ld G=%ld B=%ld every %ld ms", r, g, b, delay);
+    return 0;
 }
-SHELL_CMD_REGISTER(led, NULL, "Set LED color (r, g, b)", cmd_led);
 
-
+// Register shell command
+SHELL_CMD_REGISTER(led, NULL, "LED control: led <r> <g> <b> [delay] | led off", cmd_led);
 static const struct smf_state badge_states[];
 
 enum badge_state {
@@ -106,7 +165,6 @@ struct s_object {
   enum badge_event event;
 }s_obj;
 
-//LOG_MODULE_REGISTER(BADGE, LOG_LEVEL_DBG);
 const struct device *display_dev;
 
 // Define work queue for display operations
@@ -385,12 +443,7 @@ char text[MAX_STRINGS][32]= {
 void badge_init_entry(void* arg)
 {
   LOG_INF("Badge init entry");
-  if (!device_is_ready(strip)){
-    LOG_ERR("LED strip not ready");
-    return ;
-  }
-  LOG_INF("LED strip ready. Use shell command: led r/g/b");
-  set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
+
   // Initialize display work queue
   k_work_queue_init(&display_work_q);
   k_work_queue_start(&display_work_q, display_stack, K_THREAD_STACK_SIZEOF(display_stack),
@@ -434,7 +487,7 @@ void badge_idle_entry(void* arg)
   display_text("Makerville Badge!");
 }
 
-enum smf_state_result badge_idle_run(void* arg)
+void badge_idle_run(void* arg)
 {
   struct s_object *obj = (struct s_object *)arg;
 
@@ -455,7 +508,6 @@ enum smf_state_result badge_idle_run(void* arg)
       LOG_INF("Unhandled event in idle state %d", obj->event);
       break;
   }
-  return 0;
 }
 
 void badge_idle_exit(void* arg)
@@ -468,7 +520,7 @@ void badge_error_entry(void* arg)
   LOG_INF("Badge error entry");
 }
 
-enum smf_state_result badge_error_run(void* arg)
+void badge_error_run(void* arg)
 {
 
   struct s_object *obj = (struct s_object *)arg;
@@ -483,7 +535,6 @@ enum smf_state_result badge_error_run(void* arg)
       LOG_INF("Unhandled event in error state %d", obj->event);
       break;
   }
-  return 0;
 }
 
 void badge_error_exit(void* arg)
@@ -526,7 +577,14 @@ int main(void)
 {
   int32_t ret;
   int rc;
-
+  
+  if (!device_is_ready(strip)){
+    LOG_ERR("LED strip not ready");
+    return 0;
+  }
+  set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
+  k_work_init(&led_blink_work, led_blink_work_handler);
+  k_timer_stop(&led_blink_timer);
   smf_set_initial(SMF_CTX(&s_obj), &badge_states[BADGE_STATE_INIT]);
   while(1) {
     rc = k_msgq_get(&event_msgq, &s_obj.event, K_NO_WAIT);
