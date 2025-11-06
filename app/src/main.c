@@ -443,7 +443,10 @@ char text[MAX_STRINGS][32]= {
 void badge_init_entry(void* arg)
 {
   LOG_INF("Badge init entry");
-
+  if (!device_is_ready(strip)){
+    LOG_ERR("LED strip not ready");
+    return;
+  }
   // Initialize display work queue
   k_work_queue_init(&display_work_q);
   k_work_queue_start(&display_work_q, display_stack, K_THREAD_STACK_SIZEOF(display_stack),
@@ -487,7 +490,7 @@ void badge_idle_entry(void* arg)
   display_text("Makerville Badge!");
 }
 
-void badge_idle_run(void* arg)
+enum smf_state_result badge_idle_run(void* arg)
 {
   struct s_object *obj = (struct s_object *)arg;
 
@@ -578,10 +581,6 @@ int main(void)
   int32_t ret;
   int rc;
   
-  if (!device_is_ready(strip)){
-    LOG_ERR("LED strip not ready");
-    return 0;
-  }
   set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
   k_work_init(&led_blink_work, led_blink_work_handler);
   k_timer_stop(&led_blink_timer);
