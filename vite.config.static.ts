@@ -36,6 +36,30 @@ export default defineConfig({
         if (fs.existsSync(pcbHtml)) {
           fs.copyFileSync(pcbHtml, pcbIndex)
         }
+
+        // Copy functions directory for Cloudflare Pages Functions
+        const functionsSource = path.resolve(__dirname, 'functions')
+        const functionsDest = path.resolve(distPath, 'functions')
+
+        if (fs.existsSync(functionsSource)) {
+          // Recursively copy functions directory
+          const copyRecursive = (src: string, dest: string) => {
+            if (!fs.existsSync(dest)) {
+              fs.mkdirSync(dest, { recursive: true })
+            }
+            const entries = fs.readdirSync(src, { withFileTypes: true })
+            for (const entry of entries) {
+              const srcPath = path.join(src, entry.name)
+              const destPath = path.join(dest, entry.name)
+              if (entry.isDirectory()) {
+                copyRecursive(srcPath, destPath)
+              } else {
+                fs.copyFileSync(srcPath, destPath)
+              }
+            }
+          }
+          copyRecursive(functionsSource, functionsDest)
+        }
       }
     }
   ],
