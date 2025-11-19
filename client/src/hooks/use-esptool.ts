@@ -213,9 +213,10 @@ export function useEspTool(): EspToolHook {
       // Download firmware binary through CORS proxy
       // GitHub blocks direct browser downloads, so we need a proxy
       console.log('Downloading firmware from:', downloadUrl);
-      
-      // Use a reliable CORS proxy service
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(downloadUrl)}`;
+
+      // Use self-hosted Cloudflare Worker CORS proxy
+      const corsProxyUrl = 'https://badge.makerville.io/api/cors-proxy';
+      const proxyUrl = `${corsProxyUrl}?url=${encodeURIComponent(downloadUrl)}`;
       console.log('Using CORS proxy:', proxyUrl);
       
       const response = await fetch(proxyUrl);

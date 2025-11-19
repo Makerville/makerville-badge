@@ -1,0 +1,15 @@
+name = "makerville-cors-proxy"
+main = "cors-proxy.js"
+compatibility_date = "2024-01-01"
+
+# Workers configuration
+workers_dev = true
+
+# Routes (uncomment and configure if you want to use a custom domain)
+# routes = [
+#   { pattern = "cors-proxy.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# Environment variables (if needed)
+# [env.production]
+# name = "makerville-cors-proxy-production"
