@@ -1,0 +1,7 @@
+name = "makerville-badge"
+main = "_worker.js"
+compatibility_date = "2025-05-30"
+
+# Assets configuration
+[assets]
+directory = "./dist"
