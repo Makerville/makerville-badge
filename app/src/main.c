@@ -16,6 +16,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/drivers/led_strip.h>
+#include <zephyr/drivers/pwm.h>
 #include <string.h>
 #include <stdlib.h>
 #define LOG_LEVEL LOG_LEVEL_DGB
@@ -33,6 +34,11 @@ static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
 
 static struct led_rgb pixels[STRIP_NUM_PIXELS];
 
+// PWM Buzzer definitions
+#define PWM_BUZZER_NODE DT_ALIAS(pwm_buzzer)
+static const struct device *const pwm_buzzer = DEVICE_DT_GET(PWM_BUZZER_NODE);
+#define PWM_CHANNEL 0
+
 static void set_led_color(struct led_rgb color)
 {
   for (int i = 0; i < STRIP_NUM_PIXELS; i++){
@@ -44,6 +50,100 @@ static void set_led_color(struct led_rgb color)
   }else{
     LOG_INF("LED color set: R=%u G=%u B=%u", color.r, color.g, color.b);
   }
+}
+
+// Buzzer helper function to play a tone
+static void play_tone(uint32_t frequency_hz, uint32_t duration_ms)
+{
+  if (frequency_hz == 0) {
+    // Silence - turn off PWM
+    pwm_set(pwm_buzzer, PWM_CHANNEL, 1000000, 0, 0);
+    k_msleep(duration_ms);
+    return;
+  }
+
+  uint32_t period_ns = NSEC_PER_SEC / frequency_hz;
+  uint32_t pulse_ns = period_ns / 2; // 50% duty cycle
+
+  int ret = pwm_set(pwm_buzzer, PWM_CHANNEL, period_ns, pulse_ns, 0);
+  if (ret) {
+    LOG_ERR("Failed to set PWM: %d", ret);
+    return;
+  }
+
+  k_msleep(duration_ms);
+
+  // Turn off after duration
+  pwm_set(pwm_buzzer, PWM_CHANNEL, period_ns, 0, 0);
+}
+
+// Buzzer sequence 0: Single beep
+static void buzzer_sequence_0(void)
+{
+  LOG_INF("Buzzer sequence 0: Single beep");
+  play_tone(2000, 200); // 2kHz for 200ms
+  k_msleep(100);
+}
+
+// Buzzer sequence 1: Double beep
+static void buzzer_sequence_1(void)
+{
+  LOG_INF("Buzzer sequence 1: Double beep");
+  play_tone(2500, 150); // 2.5kHz for 150ms
+  k_msleep(100);
+  play_tone(2500, 150); // 2.5kHz for 150ms
+  k_msleep(100);
+}
+
+// Buzzer sequence 2: Ascending tones
+static void buzzer_sequence_2(void)
+{
+  LOG_INF("Buzzer sequence 2: Ascending tones");
+  play_tone(1000, 100); // 1kHz for 100ms
+  k_msleep(50);
+  play_tone(1500, 100); // 1.5kHz for 100ms
+  k_msleep(50);
+  play_tone(2000, 100); // 2kHz for 100ms
+  k_msleep(50);
+  play_tone(2500, 200); // 2.5kHz for 200ms
+  k_msleep(100);
+}
+
+static int cmd_buzzer(const struct shell *shell, size_t argc, char **argv)
+{
+  if (!device_is_ready(pwm_buzzer)) {
+    shell_error(shell, "PWM buzzer device not ready");
+    return -ENODEV;
+  }
+
+  if (argc != 2) {
+    shell_print(shell, "Usage: buzzer <0|1|2>");
+    shell_print(shell, "  0: Single beep");
+    shell_print(shell, "  1: Double beep");
+    shell_print(shell, "  2: Ascending tones");
+    return -EINVAL;
+  }
+
+  char *endptr;
+  long sequence = strtol(argv[1], &endptr, 10);
+  if (*endptr != '\0' || sequence < 0 || sequence > 2) {
+    shell_error(shell, "Invalid sequence. Use 0, 1, or 2");
+    return -EINVAL;
+  }
+
+  switch (sequence) {
+    case 0:
+      buzzer_sequence_0();
+      break;
+    case 1:
+      buzzer_sequence_1();
+      break;
+    case 2:
+      buzzer_sequence_2();
+      break;
+  }
+
+  return 0;
 }
 
 static int cmd_led(const struct shell *shell, size_t argc, char **argv)
@@ -73,6 +173,8 @@ static int cmd_led(const struct shell *shell, size_t argc, char **argv)
   set_led_color(RGB((uint8_t)r, (uint8_t)g, (uint8_t)b));
   return 0;
 }
+
+SHELL_CMD_REGISTER(buzzer, NULL, "Play buzzer sequence (0, 1, or 2)", cmd_buzzer);
 SHELL_CMD_REGISTER(led, NULL, "Set LED color (r, g, b)", cmd_led);
 
 

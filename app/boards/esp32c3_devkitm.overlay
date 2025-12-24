@@ -9,6 +9,7 @@
 
 	aliases {
 		led-strip = &led_strip;
+		pwm-buzzer = &ledc0;
 	};
 };
 
@@ -75,10 +76,30 @@
 			pinmux = <SPIM2_MOSI_GPIO6>;
 		};
 	};
+
+	ledc0_default: ledc0_default {
+		group3 {
+			pinmux = <LEDC_CH0_GPIO3>;
+			output-enable;
+		};
+	};
 };
 
 &usb_serial {
 	status = "okay";
+};
+
+&ledc0 {
+	pinctrl-0 = <&ledc0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel0@0 {
+		reg = <0x0>;
+		timer = <0>;
+	};
 };
 
 // &spi1 {
