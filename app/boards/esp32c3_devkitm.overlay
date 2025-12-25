@@ -1,4 +1,5 @@
 #include <zephyr/dt-bindings/led/led.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
 	chosen {
@@ -10,6 +11,16 @@
 	aliases {
 		led-strip = &led_strip;
 		pwm-buzzer = &ledc0;
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+
+		jingle_button: button_jingle {
+			label = "Jingle Bells Button IO2";
+			gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
+			zephyr,code = <INPUT_KEY_1>;
+		};
 	};
 };
 

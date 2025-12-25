@@ -55,9 +55,12 @@ static void set_led_color(struct led_rgb color)
 // Buzzer helper function to play a tone
 static void play_tone(uint32_t frequency_hz, uint32_t duration_ms)
 {
+  // Use a fixed period for silence/off state to avoid prescaler issues
+  #define PWM_OFF_PERIOD_NS 1000000  // 1ms period = 1kHz
+
   if (frequency_hz == 0) {
-    // Silence - turn off PWM
-    pwm_set(pwm_buzzer, PWM_CHANNEL, 1000000, 0, 0);
+    // Silence - set 0% duty cycle with fixed period
+    pwm_set(pwm_buzzer, PWM_CHANNEL, PWM_OFF_PERIOD_NS, 0, 0);
     k_msleep(duration_ms);
     return;
   }
@@ -73,8 +76,8 @@ static void play_tone(uint32_t frequency_hz, uint32_t duration_ms)
 
   k_msleep(duration_ms);
 
-  // Turn off after duration
-  pwm_set(pwm_buzzer, PWM_CHANNEL, period_ns, 0, 0);
+  // Turn off after duration - use fixed period with 0% duty cycle
+  pwm_set(pwm_buzzer, PWM_CHANNEL, PWM_OFF_PERIOD_NS, 0, 0);
 }
 
 // Buzzer sequence 0: Single beep
@@ -109,11 +112,12 @@ static void buzzer_sequence_2(void)
   k_msleep(100);
 }
 
-// Buzzer sequence 3: Jingle Bells
+// Buzzer sequence 3: Jingle Bells (Extended)
 static void buzzer_sequence_3(void)
 {
-  LOG_INF("Buzzer sequence 3: Jingle Bells");
-  // Jingle bells, jingle bells, jingle all the way
+  LOG_INF("Buzzer sequence 3: Jingle Bells (Extended)");
+
+  // Line 1: Jingle bells, jingle bells, jingle all the way
   // E E E - E E E - E G C D E
   play_tone(330, 200); // E
   k_msleep(50);
@@ -138,6 +142,97 @@ static void buzzer_sequence_3(void)
   play_tone(294, 200); // D
   k_msleep(50);
   play_tone(330, 600); // E (longest)
+  k_msleep(200);
+
+  // Line 2: Oh what fun it is to ride in a one-horse open sleigh
+  // F F F F - F E E E - E D D E - D G
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(100);
+
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(100);
+
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(294, 200); // D
+  k_msleep(50);
+  play_tone(294, 200); // D
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(294, 400); // D
+  k_msleep(100);
+  play_tone(392, 400); // G
+  k_msleep(200);
+
+  // Line 3: Jingle bells, jingle bells, jingle all the way (repeat)
+  // E E E - E E E - E G C D E
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 400); // E (longer)
+  k_msleep(100);
+
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 400); // E (longer)
+  k_msleep(100);
+
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(392, 200); // G
+  k_msleep(50);
+  play_tone(262, 300); // C
+  k_msleep(50);
+  play_tone(294, 200); // D
+  k_msleep(50);
+  play_tone(330, 600); // E (longest)
+  k_msleep(200);
+
+  // Line 4: Oh what fun it is to ride in a one-horse open sleigh (ending)
+  // F F F F - F E E E - G G F D C
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(100);
+
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(100);
+
+  play_tone(392, 200); // G
+  k_msleep(50);
+  play_tone(392, 200); // G
+  k_msleep(50);
+  play_tone(349, 200); // F
+  k_msleep(50);
+  play_tone(294, 200); // D
+  k_msleep(50);
+  play_tone(262, 600); // C (final note)
   k_msleep(100);
 }
 
@@ -569,7 +664,7 @@ void badge_init_exit(void* arg)
 void badge_idle_entry(void* arg)
 {
   LOG_INF("Badge idle entry");
-  display_text("Makerville Badge!");
+  display_text("Merry Christmas from Makerville");
 }
 
 enum smf_state_result badge_idle_run(void* arg)
@@ -641,11 +736,18 @@ void input_cb(struct input_event *event, void *cb_arg)
         if (event->code == INPUT_KEY_0) {
             if (event->value == 1) {
                 // Button pressed
-                LOG_INF("Button pressed");
+                LOG_INF("Button IO9 pressed");
                 gc.button_press_time = k_uptime_get();
             } else if (event->value == 0) {
-                // Button released
-                LOG_INF("Button released");
+                // Button released - play jingle bells
+                LOG_INF("Button IO9 released - playing jingle bells");
+                if (device_is_ready(pwm_buzzer)) {
+                    buzzer_sequence_3();
+                } else {
+                    LOG_ERR("PWM buzzer device not ready");
+                }
+
+                // Also generate state machine events based on press duration
                 int64_t press_duration = k_uptime_get() - gc.button_press_time;
                 if(press_duration > 1000) {
                   LOG_INF("Long button press");
@@ -653,6 +755,16 @@ void input_cb(struct input_event *event, void *cb_arg)
                 } else {
                   LOG_INF("Short button press");
                   gen_event(BADGE_EVENT_SHORT_BUTTON_PRESS);
+                }
+            }
+        } else if (event->code == INPUT_KEY_1) {
+            if (event->value == 0) {
+                // Button released - play jingle bells
+                LOG_INF("Button IO2 released - playing jingle bells");
+                if (device_is_ready(pwm_buzzer)) {
+                    buzzer_sequence_3();
+                } else {
+                    LOG_ERR("PWM buzzer device not ready");
                 }
             }
         }
