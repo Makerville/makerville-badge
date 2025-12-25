@@ -109,6 +109,38 @@ static void buzzer_sequence_2(void)
   k_msleep(100);
 }
 
+// Buzzer sequence 3: Jingle Bells
+static void buzzer_sequence_3(void)
+{
+  LOG_INF("Buzzer sequence 3: Jingle Bells");
+  // Jingle bells, jingle bells, jingle all the way
+  // E E E - E E E - E G C D E
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 400); // E (longer)
+  k_msleep(100);
+
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(330, 400); // E (longer)
+  k_msleep(100);
+
+  play_tone(330, 200); // E
+  k_msleep(50);
+  play_tone(392, 200); // G
+  k_msleep(50);
+  play_tone(262, 300); // C
+  k_msleep(50);
+  play_tone(294, 200); // D
+  k_msleep(50);
+  play_tone(330, 600); // E (longest)
+  k_msleep(100);
+}
+
 static int cmd_buzzer(const struct shell *shell, size_t argc, char **argv)
 {
   if (!device_is_ready(pwm_buzzer)) {
@@ -117,17 +149,18 @@ static int cmd_buzzer(const struct shell *shell, size_t argc, char **argv)
   }
 
   if (argc != 2) {
-    shell_print(shell, "Usage: buzzer <0|1|2>");
+    shell_print(shell, "Usage: buzzer <0|1|2|3>");
     shell_print(shell, "  0: Single beep");
     shell_print(shell, "  1: Double beep");
     shell_print(shell, "  2: Ascending tones");
+    shell_print(shell, "  3: Jingle Bells");
     return -EINVAL;
   }
 
   char *endptr;
   long sequence = strtol(argv[1], &endptr, 10);
-  if (*endptr != '\0' || sequence < 0 || sequence > 2) {
-    shell_error(shell, "Invalid sequence. Use 0, 1, or 2");
+  if (*endptr != '\0' || sequence < 0 || sequence > 3) {
+    shell_error(shell, "Invalid sequence. Use 0, 1, 2, or 3");
     return -EINVAL;
   }
 
@@ -140,6 +173,9 @@ static int cmd_buzzer(const struct shell *shell, size_t argc, char **argv)
       break;
     case 2:
       buzzer_sequence_2();
+      break;
+    case 3:
+      buzzer_sequence_3();
       break;
   }
 
@@ -174,7 +210,7 @@ static int cmd_led(const struct shell *shell, size_t argc, char **argv)
   return 0;
 }
 
-SHELL_CMD_REGISTER(buzzer, NULL, "Play buzzer sequence (0, 1, or 2)", cmd_buzzer);
+SHELL_CMD_REGISTER(buzzer, NULL, "Play buzzer sequence (0, 1, 2, or 3)", cmd_buzzer);
 SHELL_CMD_REGISTER(led, NULL, "Set LED color (r, g, b)", cmd_led);
 
 
