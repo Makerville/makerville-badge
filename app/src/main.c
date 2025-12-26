@@ -117,6 +117,9 @@ static void buzzer_sequence_3(void)
 {
   LOG_INF("Buzzer sequence 3: Jingle Bells (Extended)");
 
+  // Set LED to green for first line
+  set_led_color(RGB(0, 255, 0)); // Green
+
   // Line 1: Jingle bells, jingle bells, jingle all the way
   // E E E - E E E - E G C D E
   play_tone(330, 200); // E
@@ -143,6 +146,9 @@ static void buzzer_sequence_3(void)
   k_msleep(50);
   play_tone(330, 600); // E (longest)
   k_msleep(200);
+
+  // Set LED to red for second line
+  set_led_color(RGB(255, 0, 0)); // Red
 
   // Line 2: Oh what fun it is to ride in a one-horse open sleigh
   // F F F F - F E E E - E D D E - D G
@@ -177,6 +183,9 @@ static void buzzer_sequence_3(void)
   play_tone(392, 400); // G
   k_msleep(200);
 
+  // Set LED to white for third line
+  set_led_color(RGB(255, 255, 255)); // White
+
   // Line 3: Jingle bells, jingle bells, jingle all the way (repeat)
   // E E E - E E E - E G C D E
   play_tone(330, 200); // E
@@ -203,6 +212,9 @@ static void buzzer_sequence_3(void)
   k_msleep(50);
   play_tone(330, 600); // E (longest)
   k_msleep(200);
+
+  // Set LED to green for fourth line
+  set_led_color(RGB(0, 255, 0)); // Green
 
   // Line 4: Oh what fun it is to ride in a one-horse open sleigh (ending)
   // F F F F - F E E E - G G F D C
@@ -234,6 +246,9 @@ static void buzzer_sequence_3(void)
   k_msleep(50);
   play_tone(262, 600); // C (final note)
   k_msleep(100);
+
+  // Turn off LED when done
+  set_led_color(RGB(0, 0, 0)); // Off
 }
 
 static int cmd_buzzer(const struct shell *shell, size_t argc, char **argv)
@@ -623,7 +638,7 @@ void badge_init_entry(void* arg)
     return ;
   }
   LOG_INF("LED strip ready. Use shell command: led r/g/b");
-  set_led_color(RGB(0x0F, 0x0F, 0x0F)); // Default: white
+  set_led_color(RGB(0, 0, 0)); // Default: off
   // Initialize display work queue
   k_work_queue_init(&display_work_q);
   k_work_queue_start(&display_work_q, display_stack, K_THREAD_STACK_SIZEOF(display_stack),
@@ -664,7 +679,7 @@ void badge_init_exit(void* arg)
 void badge_idle_entry(void* arg)
 {
   LOG_INF("Badge idle entry");
-  display_text("Merry Christmas from Makerville");
+  display_text("Makerville Badge");
 }
 
 enum smf_state_result badge_idle_run(void* arg)
@@ -741,11 +756,14 @@ void input_cb(struct input_event *event, void *cb_arg)
             } else if (event->value == 0) {
                 // Button released - play jingle bells
                 LOG_INF("Button IO9 released - playing jingle bells");
+                display_text("Merry Christmas from Makerville");
                 if (device_is_ready(pwm_buzzer)) {
                     buzzer_sequence_3();
                 } else {
                     LOG_ERR("PWM buzzer device not ready");
                 }
+                // Restore default message
+                display_text("Makerville Badge");
 
                 // Also generate state machine events based on press duration
                 int64_t press_duration = k_uptime_get() - gc.button_press_time;
@@ -761,11 +779,14 @@ void input_cb(struct input_event *event, void *cb_arg)
             if (event->value == 0) {
                 // Button released - play jingle bells
                 LOG_INF("Button IO2 released - playing jingle bells");
+                display_text("Merry Christmas from Makerville");
                 if (device_is_ready(pwm_buzzer)) {
                     buzzer_sequence_3();
                 } else {
                     LOG_ERR("PWM buzzer device not ready");
                 }
+                // Restore default message
+                display_text("Makerville Badge");
             }
         }
     }
