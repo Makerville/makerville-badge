@@ -11,7 +11,8 @@ interface SerialConsoleProps {
   console: SerialConsoleHook;
 }
 
-const QUICK_COMMANDS = ["help", "led 0 0 255", "led 255 0 0 500", "led off"];
+// Only `led <r> <g> <b>` exists in released firmware (0.4); `led off` and blink are unreleased
+const QUICK_COMMANDS = ["help", "led 255 0 0", "led 0 255 0", "led 0 0 255", "led 0 0 0"];
 
 export function SerialConsole({ console: serial }: SerialConsoleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
