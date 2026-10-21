@@ -1,4 +1,4 @@
-import { Zap, Download, Usb, CheckCircle, AlertTriangle, ScrollText, RotateCcw } from "lucide-react";
+import { Zap, Download, Usb, CheckCircle, AlertTriangle, PauseCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,17 +8,19 @@ import { Navigation } from "@/components/ui/navigation";
 import { useGitHubReleases } from "@/hooks/use-github-releases";
 import { useEspTool } from "@/hooks/use-esptool";
 import { useSerialConsole } from "@/hooks/use-serial-console";
+import { detectWebSerialSupport } from "@/lib/webserial-utils";
 import { BrowserCompatibilityAlert } from "@/components/ui/browser-compatibility-alert";
 import { SerialConsole } from "@/components/serial-console";
 
 export default function Flash() {
   const { releases, isLoading, error } = useGitHubReleases("makerville", "makerville-badge");
-  const { connectionState, flashState, logState, webSerialSupport, connect, disconnect, flashFirmware, releasePort, clearLogs, isConnecting, isConnected, isFlashing } = useEspTool();
-  const serialConsole = useSerialConsole();
+  const { flashState, logState, flashFirmware, clearLogs, isFlashing } = useEspTool();
+  const serial = useSerialConsole();
+  const webSerialSupport = detectWebSerialSupport();
   const [selectedRelease, setSelectedRelease] = useState<string>("");
-  const logsEndRef = useRef<HTMLDivElement>(null);
+  const logsRef = useRef<HTMLDivElement>(null);
 
-  const firmwareBinaries = releases.flatMap(release => 
+  const firmwareBinaries = releases.flatMap(release =>
     release.assets.filter(asset => asset.name === 'makerville-badge.bin')
       .map(asset => ({
         release: release.tag_name,
@@ -31,18 +33,22 @@ export default function Flash() {
   );
 
   const handleFlash = async () => {
-    if (!selectedRelease || !isConnected) return;
-    if (!await flashFirmware(selectedRelease)) return;
+    if (!selectedRelease || !serial.isConnected) return;
 
-    // Hand the port over to the serial console so the user can talk to the new firmware
-    const port = await releasePort();
-    if (port) await serialConsole.open(port);
+    // Borrow the port from the console for flashing, then give it back so the
+    // user lands in the new firmware's shell
+    const port = await serial.suspend();
+    if (!port) return;
+    clearLogs();
+    await flashFirmware(port, selectedRelease);
+    await serial.resume();
   };
 
-  // Auto-scroll to bottom when new logs arrive
+  // Keep the flash log scrolled to the latest line
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (logsRef.current) logsRef.current.scrollTop = logsRef.current.scrollHeight;
   }, [logState.logs]);
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -53,8 +59,8 @@ export default function Flash() {
         <div className="space-y-6">
           {/* Browser Compatibility Warning */}
           <BrowserCompatibilityAlert webSerialSupport={webSerialSupport} />
-          
-          {/* Connection Status Card */}
+
+          {/* Connection Card - owns the serial port for both flashing and the console */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -62,42 +68,51 @@ export default function Flash() {
                 Device Connection
               </CardTitle>
               <CardDescription>
-                Connect your ESP32-based badge via USB
+                Connect your badge via USB to flash it or talk to it
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {connectionState.status === 'connected' && (
+              {serial.status === 'open' && (
                 <div className="flex items-center gap-2 p-3 bg-green-50 rounded-md border border-green-200">
                   <CheckCircle className="w-4 h-4 text-green-600" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800">Connected to {connectionState.chipType}</p>
-                    <p className="text-xs text-green-600">Ready to flash firmware</p>
+                    <p className="text-sm font-medium text-green-800">Badge connected</p>
+                    <p className="text-xs text-green-600">Ready to flash, logs streaming below</p>
                   </div>
-                  <Badge variant="secondary" className="text-green-700 bg-green-100">
-                    {connectionState.chipType}
-                  </Badge>
+                  {flashState.chipType && (
+                    <Badge variant="secondary" className="text-green-700 bg-green-100">
+                      {flashState.chipType}
+                    </Badge>
+                  )}
                 </div>
               )}
 
-              {connectionState.status === 'error' && (
+              {serial.status === 'suspended' && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-md border border-blue-200">
+                  <PauseCircle className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-medium text-blue-800">Flashing, keep the badge plugged in</p>
+                </div>
+              )}
+
+              {serial.status === 'error' && (
                 <div className="p-3 bg-red-50 rounded-md border border-red-200">
                   <p className="text-sm font-medium text-red-800">Connection Error</p>
-                  <p className="text-xs text-red-600">{connectionState.error}</p>
+                  <p className="text-xs text-red-600">{serial.error}</p>
                 </div>
               )}
 
               <div className="flex gap-2">
-                {!isConnected ? (
+                {!serial.isConnected ? (
                   <Button
-                    onClick={connect}
-                    disabled={isConnecting || !webSerialSupport.supported || serialConsole.isOpen}
+                    onClick={serial.connect}
+                    disabled={serial.status === 'connecting' || !webSerialSupport.supported}
                     className="flex-1"
                   >
                     <Usb className="w-4 h-4 mr-2" />
-                    {isConnecting ? 'Connecting...' : 'Connect Device'}
+                    {serial.status === 'connecting' ? 'Connecting...' : 'Connect Device'}
                   </Button>
                 ) : (
-                  <Button onClick={disconnect} variant="outline" className="flex-1">
+                  <Button onClick={serial.disconnect} disabled={isFlashing} variant="outline" className="flex-1">
                     Disconnect
                   </Button>
                 )}
@@ -110,10 +125,10 @@ export default function Flash() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="w-5 h-5" />
-                ESP32 Flash Tool
+                Flash Firmware
               </CardTitle>
               <CardDescription>
-                Upload firmware binaries directly to your badge
+                Install a released firmware on your badge
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -169,8 +184,8 @@ export default function Flash() {
                         <span className="text-slate-800 font-medium">{flashState.progress}%</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all duration-300" 
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
                           style={{ width: `${flashState.progress}%` }}
                         />
                       </div>
@@ -179,16 +194,16 @@ export default function Flash() {
                 </div>
               )}
 
-              <Button 
+              <Button
                 onClick={handleFlash}
-                disabled={!isConnected || !selectedRelease || isFlashing || firmwareBinaries.length === 0} 
+                disabled={!serial.isOpen || !selectedRelease || isFlashing || firmwareBinaries.length === 0}
                 className="w-full"
               >
                 <Download className="w-4 h-4 mr-2" />
                 {isFlashing ? flashState.message : 'Flash Firmware'}
               </Button>
-              
-              {!isConnected ? (
+
+              {!serial.isConnected ? (
                 <p className="text-xs text-slate-500 text-center">
                   Connect your device first to enable flashing
                 </p>
@@ -196,46 +211,24 @@ export default function Flash() {
                 <p className="text-xs text-slate-500 text-center">
                   Select a firmware version to flash
                 </p>
-              ) : firmwareBinaries.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center">
-                  No makerville-badge.bin found in releases
-                </p>
               ) : null}
+
+              {logState.logs.length > 0 && (
+                <details open={flashState.status === 'error'} className="text-sm">
+                  <summary className="cursor-pointer text-slate-600 hover:text-slate-800">Flash log</summary>
+                  <div ref={logsRef} className="mt-2 bg-slate-900 text-green-400 p-3 rounded-md font-mono text-xs max-h-48 overflow-y-auto">
+                    {logState.logs.map((log, index) => (
+                      <div key={index} className="whitespace-pre-wrap break-words">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </CardContent>
           </Card>
 
-          {/* Flash Log Card - esptool output */}
-          {logState.logs.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ScrollText className="w-5 h-5" />
-                    Flash Log
-                  </div>
-                  <Button onClick={clearLogs} variant="outline" size="sm">
-                    <RotateCcw className="w-4 h-4 mr-1" />
-                    Clear
-                  </Button>
-                </CardTitle>
-                <CardDescription>Output from the flasher</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-slate-900 text-green-400 p-4 rounded-md font-mono text-sm max-h-60 overflow-y-auto">
-                  {logState.logs.map((log, index) => (
-                    <div key={index} className="whitespace-pre-wrap break-words">
-                      {log}
-                    </div>
-                  ))}
-                  <div ref={logsEndRef} />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {webSerialSupport.supported && (
-            <SerialConsole console={serialConsole} portBusy={isConnected} />
-          )}
+          {webSerialSupport.supported && <SerialConsole console={serial} />}
         </div>
       </main>
     </div>

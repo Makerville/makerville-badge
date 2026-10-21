@@ -2,20 +2,18 @@ import { useEffect, useRef } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { Terminal, Plug, Unplug, RotateCcw, Eraser } from "lucide-react";
+import { Terminal, RotateCcw, Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SerialConsoleHook } from "@/hooks/use-serial-console";
 
 interface SerialConsoleProps {
   console: SerialConsoleHook;
-  // The flasher currently owns the port
-  portBusy: boolean;
 }
 
 const QUICK_COMMANDS = ["help", "led 0 0 255", "led 255 0 0 500", "led off"];
 
-export function SerialConsole({ console: serial, portBusy }: SerialConsoleProps) {
+export function SerialConsole({ console: serial }: SerialConsoleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const { attachTerminal, send } = serial;
@@ -65,33 +63,15 @@ export function SerialConsole({ console: serial, portBusy }: SerialConsoleProps)
           Serial Console
         </CardTitle>
         <CardDescription>
-          Talk to the badge's shell over USB. Opens automatically after flashing.
+          {serial.status === 'suspended'
+            ? 'Paused while flashing. Reconnects when done.'
+            : serial.isOpen
+              ? "Type into the badge's shell, or use the shortcuts below"
+              : 'Connect your badge above to see its logs and use its shell'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {serial.status === 'error' && (
-          <div className="p-3 bg-red-50 rounded-md border border-red-200">
-            <p className="text-sm font-medium text-red-800">Console Error</p>
-            <p className="text-xs text-red-600">{serial.error}</p>
-          </div>
-        )}
-
         <div className="flex flex-wrap gap-2">
-          {serial.isOpen ? (
-            <Button onClick={serial.close} variant="outline" size="sm">
-              <Unplug className="w-4 h-4 mr-1" />
-              Disconnect
-            </Button>
-          ) : (
-            <Button
-              onClick={() => serial.open()}
-              disabled={portBusy || serial.status === 'opening'}
-              size="sm"
-            >
-              <Plug className="w-4 h-4 mr-1" />
-              {serial.status === 'opening' ? 'Connecting...' : 'Connect'}
-            </Button>
-          )}
           <Button onClick={serial.restartDevice} disabled={!serial.isOpen} variant="outline" size="sm">
             <RotateCcw className="w-4 h-4 mr-1" />
             Restart badge
@@ -101,12 +81,6 @@ export function SerialConsole({ console: serial, portBusy }: SerialConsoleProps)
             Clear
           </Button>
         </div>
-
-        {portBusy && !serial.isOpen && (
-          <p className="text-xs text-slate-500">
-            The flasher is using the port. Flash firmware or disconnect it to use the console.
-          </p>
-        )}
 
         <div className="bg-slate-900 rounded-md p-2">
           <div ref={containerRef} className="h-72 w-full" />
