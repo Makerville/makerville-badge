@@ -1,4 +1,4 @@
-import { Zap, Download, Usb, CheckCircle, AlertTriangle, Terminal, X, RotateCcw } from "lucide-react";
+import { Zap, Download, Usb, CheckCircle, AlertTriangle, ScrollText, RotateCcw } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Navigation } from "@/components/ui/navigation";
 import { useGitHubReleases } from "@/hooks/use-github-releases";
 import { useEspTool } from "@/hooks/use-esptool";
+import { useSerialConsole } from "@/hooks/use-serial-console";
 import { BrowserCompatibilityAlert } from "@/components/ui/browser-compatibility-alert";
+import { SerialConsole } from "@/components/serial-console";
 
 export default function Flash() {
   const { releases, isLoading, error } = useGitHubReleases("makerville", "makerville-badge");
-  const { connectionState, flashState, logState, webSerialSupport, connect, disconnect, flashFirmware, startMonitoring, stopMonitoring, clearLogs, isConnecting, isConnected, isFlashing } = useEspTool();
+  const { connectionState, flashState, logState, webSerialSupport, connect, disconnect, flashFirmware, releasePort, clearLogs, isConnecting, isConnected, isFlashing } = useEspTool();
+  const serialConsole = useSerialConsole();
   const [selectedRelease, setSelectedRelease] = useState<string>("");
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +32,11 @@ export default function Flash() {
 
   const handleFlash = async () => {
     if (!selectedRelease || !isConnected) return;
-    await flashFirmware(selectedRelease);
+    if (!await flashFirmware(selectedRelease)) return;
+
+    // Hand the port over to the serial console so the user can talk to the new firmware
+    const port = await releasePort();
+    if (port) await serialConsole.open(port);
   };
 
   // Auto-scroll to bottom when new logs arrive
@@ -42,7 +49,7 @@ export default function Flash() {
       <Navigation currentPage="flash" />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 max-w-md">
+      <main className="container mx-auto px-4 py-6 max-w-2xl">
         <div className="space-y-6">
           {/* Browser Compatibility Warning */}
           <BrowserCompatibilityAlert webSerialSupport={webSerialSupport} />
@@ -83,7 +90,7 @@ export default function Flash() {
                 {!isConnected ? (
                   <Button
                     onClick={connect}
-                    disabled={isConnecting || !webSerialSupport.supported}
+                    disabled={isConnecting || !webSerialSupport.supported || serialConsole.isOpen}
                     className="flex-1"
                   >
                     <Usb className="w-4 h-4 mr-2" />
@@ -197,59 +204,37 @@ export default function Flash() {
             </CardContent>
           </Card>
 
-          {/* Device Logs Card - Show after successful flash or when monitoring */}
-          {(flashState.status === 'success' || logState.isMonitoring || logState.logs.length > 0) && (
+          {/* Flash Log Card - esptool output */}
+          {logState.logs.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Terminal className="w-5 h-5" />
-                    Device Logs
+                    <ScrollText className="w-5 h-5" />
+                    Flash Log
                   </div>
-                  <div className="flex items-center gap-2">
-                    {logState.isMonitoring ? (
-                      <Button onClick={stopMonitoring} variant="outline" size="sm">
-                        <X className="w-4 h-4 mr-1" />
-                        Stop
-                      </Button>
-                    ) : isConnected && (
-                      <Button onClick={startMonitoring} variant="outline" size="sm">
-                        <Terminal className="w-4 h-4 mr-1" />
-                        Monitor
-                      </Button>
-                    )}
-                    <Button onClick={clearLogs} variant="outline" size="sm">
-                      <RotateCcw className="w-4 h-4 mr-1" />
-                      Clear
-                    </Button>
-                  </div>
+                  <Button onClick={clearLogs} variant="outline" size="sm">
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Clear
+                  </Button>
                 </CardTitle>
-                <CardDescription>
-                  {logState.isMonitoring 
-                    ? 'Monitoring device output in real-time'
-                    : 'Device output and boot logs'}
-                </CardDescription>
+                <CardDescription>Output from the flasher</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="bg-slate-900 text-green-400 p-4 rounded-md font-mono text-sm max-h-60 overflow-y-auto">
-                  {logState.logs.length === 0 ? (
-                    <div className="text-slate-500 italic">No logs yet...</div>
-                  ) : (
-                    logState.logs.map((log, index) => (
-                      <div key={index} className="whitespace-pre-wrap break-words">
-                        {log}
-                      </div>
-                    ))
-                  )}
-                  {logState.isMonitoring && (
-                    <div className="text-yellow-400 animate-pulse">
-                      ● Monitoring...
+                  {logState.logs.map((log, index) => (
+                    <div key={index} className="whitespace-pre-wrap break-words">
+                      {log}
                     </div>
-                  )}
+                  ))}
                   <div ref={logsEndRef} />
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {webSerialSupport.supported && (
+            <SerialConsole console={serialConsole} portBusy={isConnected} />
           )}
         </div>
       </main>

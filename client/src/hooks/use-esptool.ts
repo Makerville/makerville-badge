@@ -2,28 +2,6 @@ import { useState, useCallback, useRef } from 'react';
 import { ESPLoader, Transport, LoaderOptions } from 'esptool-js';
 import { detectWebSerialSupport, WebSerialSupport } from '@/lib/webserial-utils';
 
-// Extend global Navigator interface for Web Serial API
-declare global {
-  interface Navigator {
-    serial: {
-      requestPort(options?: SerialPortRequestOptions): Promise<SerialPort>;
-    };
-  }
-  
-  interface SerialPort {
-    // Basic SerialPort interface - esptool-js handles the details
-  }
-  
-  interface SerialPortRequestOptions {
-    filters?: SerialPortFilter[];
-  }
-  
-  interface SerialPortFilter {
-    usbVendorId?: number;
-    usbProductId?: number;
-  }
-}
-
 export interface ConnectionState {
   status: 'disconnected' | 'connecting' | 'connected' | 'error';
   device: SerialPort | null;
@@ -40,7 +18,6 @@ export interface FlashState {
 
 export interface LogState {
   logs: string[];
-  isMonitoring: boolean;
 }
 
 export interface EspToolHook {
@@ -50,13 +27,23 @@ export interface EspToolHook {
   webSerialSupport: WebSerialSupport;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  flashFirmware: (downloadUrl: string) => Promise<void>;
-  startMonitoring: () => Promise<void>;
-  stopMonitoring: () => void;
+  flashFirmware: (downloadUrl: string) => Promise<boolean>;
+  releasePort: () => Promise<SerialPort | null>;
   clearLogs: () => void;
   isConnecting: boolean;
   isConnected: boolean;
   isFlashing: boolean;
+}
+
+// Transport.disconnect() cancels its reader without releasing the lock, which leaves
+// waitForUnlock() spinning, so release it here before closing the port
+async function closeTransport(transport: Transport) {
+  const reader = (transport as unknown as { reader?: ReadableStreamDefaultReader<Uint8Array> }).reader;
+  if (reader) {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  await transport.device.close();
 }
 
 export function useEspTool(): EspToolHook {
@@ -75,8 +62,7 @@ export function useEspTool(): EspToolHook {
   });
 
   const [logState, setLogState] = useState<LogState>({
-    logs: [],
-    isMonitoring: false
+    logs: []
   });
 
   const espLoaderRef = useRef<ESPLoader | null>(null);
@@ -158,7 +144,7 @@ export function useEspTool(): EspToolHook {
       // Clean up on error
       if (transportRef.current) {
         try {
-          await transportRef.current.disconnect();
+          await closeTransport(transportRef.current);
         } catch (e) {
           console.warn('Error during cleanup:', e);
         }
@@ -171,7 +157,7 @@ export function useEspTool(): EspToolHook {
   const disconnect = useCallback(async () => {
     try {
       if (transportRef.current) {
-        await transportRef.current.disconnect();
+        await closeTransport(transportRef.current);
       }
     } catch (error) {
       console.warn('Error during disconnect:', error);
@@ -194,7 +180,7 @@ export function useEspTool(): EspToolHook {
         status: 'error',
         error: 'Device not connected'
       }));
-      return;
+      return false;
     }
 
     try {
@@ -282,11 +268,7 @@ export function useEspTool(): EspToolHook {
         message: 'Firmware flashed successfully!',
         error: null
       });
-
-      // Start monitoring device logs after successful flash
-      setTimeout(() => {
-        startMonitoring();
-      }, 1000);
+      return true;
 
     } catch (error) {
       console.error('Flash failed:', error);
@@ -296,56 +278,41 @@ export function useEspTool(): EspToolHook {
         message: '',
         error: error instanceof Error ? error.message : 'Flash operation failed'
       });
+      return false;
     }
   }, [connectionState.status]);
 
-  const startMonitoring = useCallback(async () => {
-    if (!transportRef.current || connectionState.status !== 'connected') {
-      return;
+  // Reset the badge into its app and close the port, returning it so the serial console can open it
+  const releasePort = useCallback(async () => {
+    const transport = transportRef.current;
+    if (!transport) return null;
+
+    const device = transport.device;
+    try {
+      // RTS pulses EN; DTR (GPIO9) stays released so the chip boots the app, not the bootloader
+      await transport.setDTR(false);
+      await transport.setRTS(true);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await transport.setRTS(false);
+      terminal.writeLine('Reset badge, handing port to serial console');
+    } catch (error) {
+      console.warn('Could not reset device:', error);
     }
 
     try {
-      setLogState(prev => ({ ...prev, isMonitoring: true }));
-      
-      // Add initial log message
-      const timestamp = new Date().toLocaleTimeString();
-      setLogState(prev => ({
-        ...prev,
-        logs: [...prev.logs, `[${timestamp}] === Device Monitoring Started ===`]
-      }));
-
-      // Try to reset the device using transport directly
-      try {
-        await transportRef.current.setDTR(false);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await transportRef.current.setRTS(false);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await transportRef.current.setDTR(true);
-        
-        setLogState(prev => ({
-          ...prev,
-          logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Device reset - watching for boot logs...`]
-        }));
-      } catch (resetError) {
-        console.warn('Could not reset device:', resetError);
-        setLogState(prev => ({
-          ...prev,
-          logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Could not reset device, monitoring output...`]
-        }));
-      }
-      
+      await closeTransport(transport);
     } catch (error) {
-      console.error('Failed to start monitoring:', error);
-      setLogState(prev => ({ 
-        ...prev, 
-        isMonitoring: false,
-        logs: [...prev.logs, `[${new Date().toLocaleTimeString()}] Monitoring failed: ${error instanceof Error ? error.message : 'Unknown error'}`]
-      }));
+      console.warn('Error closing port:', error);
     }
-  }, [connectionState.status]);
-
-  const stopMonitoring = useCallback(() => {
-    setLogState(prev => ({ ...prev, isMonitoring: false }));
+    transportRef.current = null;
+    espLoaderRef.current = null;
+    setConnectionState({
+      status: 'disconnected',
+      device: null,
+      chipType: null,
+      error: null
+    });
+    return device;
   }, []);
 
   const clearLogs = useCallback(() => {
@@ -360,8 +327,7 @@ export function useEspTool(): EspToolHook {
     connect,
     disconnect,
     flashFirmware,
-    startMonitoring,
-    stopMonitoring,
+    releasePort,
     clearLogs,
     isConnecting: connectionState.status === 'connecting',
     isConnected: connectionState.status === 'connected',
